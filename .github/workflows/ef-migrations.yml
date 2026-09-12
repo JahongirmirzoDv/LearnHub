@@ -1,0 +1,84 @@
+name: EF Core migration (cloud)
+
+# Generates a new EF Core migration for BOTH database providers in the cloud and commits it to the
+# selected branch. Useful for team members without the .NET SDK installed locally.
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "Migration name in PascalCase, e.g. AddCourseLevel"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ef-migrations-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  add-migration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Validate migration name
+        env:
+          MIGRATION_NAME: ${{ inputs.name }}
+        run: |
+          if [[ ! "$MIGRATION_NAME" =~ ^[A-Z][A-Za-z0-9]{2,80}$ ]]; then
+            echo "::error::Migration name must be PascalCase letters/digits (3-81 chars)."
+            exit 1
+          fi
+
+      - name: Restore tools and packages
+        run: |
+          dotnet tool restore
+          dotnet restore LearnHub.sln
+
+      - name: Add SQLite migration
+        env:
+          MIGRATION_NAME: ${{ inputs.name }}
+        run: >
+          dotnet ef migrations add "$MIGRATION_NAME"
+          --project src/LearnHub
+          --context SqliteDbContext
+          --output-dir Data/Migrations/Sqlite
+
+      - name: Add SQL Server migration
+        env:
+          MIGRATION_NAME: ${{ inputs.name }}
+        run: >
+          dotnet ef migrations add "$MIGRATION_NAME"
+          --project src/LearnHub
+          --context SqlServerDbContext
+          --output-dir Data/Migrations/SqlServer
+
+      - name: Verify the solution still builds
+        run: dotnet build LearnHub.sln --configuration Release
+
+      - name: Commit migration
+        env:
+          MIGRATION_NAME: ${{ inputs.name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/LearnHub/Data/Migrations
+          if git diff --cached --quiet; then
+            echo "No migration changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(db): add $MIGRATION_NAME migration (SQLite + SQL Server)"
+          git push
