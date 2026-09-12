@@ -1,0 +1,16 @@
+# Normalise line endings so Windows, macOS and Linux team members produce clean diffs.
+* text=auto eol=lf
+
+*.sln        text eol=crlf
+*.cmd        text eol=crlf
+*.bat        text eol=crlf
+
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.webp       binary
+*.gif        binary
+*.ico        binary
+*.pdf        binary
+*.woff       binary
+*.woff2      binary

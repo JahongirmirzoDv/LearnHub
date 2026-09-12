@@ -1,0 +1,85 @@
+# ---------------------------------------------------------------
+# LearnHub .gitignore – .NET, Visual Studio, Rider, VS Code, macOS
+# ---------------------------------------------------------------
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]64/
+[Ll]og/
+[Ll]ogs/
+publish/
+artifacts/
+*.nupkg
+*.snupkg
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.vspscc
+*.vssscc
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+*.ncrunch*
+.localhistory/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# VS Code (keep shared settings only)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Test results and coverage
+[Tt]est[Rr]esult*/
+*.trx
+coverage*.json
+coverage*.xml
+coverage*.info
+TestResults/
+
+# Secrets – never commit these (use dotnet user-secrets / environment variables)
+secrets.json
+*.pfx
+*.pem
+*.key
+.env
+.env.*
+appsettings.*.local.json
+appsettings.Local.json
+*.PublishSettings
+*.publishsettings
+*.azurePubxml
+
+# Local databases and runtime data
+App_Data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Node / Playwright (tests/e2e)
+node_modules/
+playwright-report/
+test-results/
+blob-report/
+tests/e2e/screenshots/
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
