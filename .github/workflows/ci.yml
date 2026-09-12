@@ -52,12 +52,13 @@ jobs:
 
       - name: Test
         run: >
-          dotnet test LearnHub.sln
+          dotnet test
+          --solution LearnHub.sln
           --configuration Release
           --no-build
-          --logger "trx;LogFileName=test-results.trx"
-          --logger "console;verbosity=normal"
-          --results-directory TestResults
+          --results-directory "$GITHUB_WORKSPACE/TestResults"
+          --report-xunit-trx
+          --report-xunit-trx-filename test-results.trx
 
       - name: Summarise test results
         if: always()
