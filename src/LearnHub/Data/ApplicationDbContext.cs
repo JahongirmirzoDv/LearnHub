@@ -34,6 +34,12 @@ public abstract class ApplicationDbContext(DbContextOptions options) : IdentityD
 
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
