@@ -33,7 +33,7 @@ public sealed class FileStorageServiceTests : IDisposable
         Assert.StartsWith("resources/", stored.RelativePath);
         Assert.DoesNotContain("Diagram", stored.RelativePath);
         Assert.Equal("image/png", stored.ContentType);
-        Assert.Equal("My-Diagram--final.png", stored.FileName);
+        Assert.Equal("My-Diagram-final.png", stored.FileName);
         Assert.NotNull(_storage.GetPhysicalPath(stored.RelativePath));
     }
 

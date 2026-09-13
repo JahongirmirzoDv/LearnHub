@@ -182,20 +182,20 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
 
     public async Task<OperationResult<int>> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var question = await db.Questions.FirstOrDefaultAsync(q => q.Id == id, cancellationToken);
-        if (question is null)
+        var quizId = await db.Questions.Where(q => q.Id == id).Select(q => (int?)q.QuizId).FirstOrDefaultAsync(cancellationToken);
+        if (quizId is null)
         {
             return OperationResult<int>.NotFound();
         }
 
         await db.InTransactionAsync(async () =>
         {
+            // Answers reference the question with NO ACTION; the options cascade with the question row.
             await db.QuizAnswers.Where(a => a.QuestionId == id).ExecuteDeleteAsync(cancellationToken);
-            db.Questions.Remove(question);
-            await db.SaveChangesAsync(cancellationToken);
+            await db.Questions.Where(q => q.Id == id).ExecuteDeleteAsync(cancellationToken);
         }, cancellationToken);
 
-        logger.LogInformation("Question {QuestionId} deleted from quiz {QuizId}.", id, question.QuizId);
-        return OperationResult<int>.Success(question.QuizId);
+        logger.LogInformation("Question {QuestionId} deleted from quiz {QuizId}.", id, quizId);
+        return OperationResult<int>.Success(quizId.Value);
     }
 }

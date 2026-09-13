@@ -228,7 +228,7 @@ public sealed class AdminCourseDetailsViewModel
 
     public IReadOnlyList<AdminQuizListItem> Quizzes { get; init; } = [];
 
-    public IReadOnlyList<RecentEnrollmentItem> RecentEnrollments { get; init; } = [];
+    public IReadOnlyList<RecentEnrollmentItem> RecentEnrollments { get; set; } = [];
 }
 
 public sealed record CourseDeleteViewModel(int Id, string Title, bool IsPublished, int ResourceCount, int QuizCount, int EnrollmentCount, int AttemptCount);

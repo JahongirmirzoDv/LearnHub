@@ -101,15 +101,21 @@ public sealed class CourseManagementService(
                 Quizzes = c.Quizzes
                     .OrderBy(q => q.Id)
                     .Select(q => new AdminQuizListItem(q.Id, q.Title, c.Id, c.Title, q.Questions.Count, q.Attempts.Count, q.PassMarkPercent, q.IsPublished, q.UpdatedAt))
-                    .ToList(),
-                RecentEnrollments = c.Enrollments
-                    .OrderByDescending(e => e.EnrolledAt)
-                    .Take(5)
-                    .Select(e => new RecentEnrollmentItem(e.User.FullName, c.Id, c.Title, e.EnrolledAt))
                     .ToList()
             })
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (course is not null)
+        {
+            // A limited (Take) collection inside a projection needs SQL APPLY, which SQLite lacks; query it separately.
+            course.RecentEnrollments = await db.Enrollments.AsNoTracking()
+                .Where(e => e.CourseId == id)
+                .OrderByDescending(e => e.EnrolledAt)
+                .Take(5)
+                .Select(e => new RecentEnrollmentItem(e.User.FullName, e.CourseId, e.Course.Title, e.EnrolledAt))
+                .ToListAsync(cancellationToken);
+        }
 
         return course;
     }
@@ -262,7 +268,10 @@ public sealed class CourseManagementService(
 
     public async Task<OperationResult> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var course = await db.Courses.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+        var course = await db.Courses.AsNoTracking()
+            .Where(c => c.Id == id)
+            .Select(c => new { c.Title, c.ThumbnailPath })
+            .FirstOrDefaultAsync(cancellationToken);
         if (course is null)
         {
             return OperationResult.NotFound();
@@ -272,18 +281,15 @@ public sealed class CourseManagementService(
             .Where(r => r.CourseId == id && r.FilePath != null)
             .Select(r => r.FilePath!)
             .ToListAsync(cancellationToken);
-        var thumbnail = course.ThumbnailPath;
 
         await db.InTransactionAsync(async () =>
         {
-            // Quiz answers reference questions with NO ACTION, so they are removed first; the database then
-            // cascades the course to its resources, quizzes, questions, options, attempts and enrolments.
+            // Quiz answers reference questions with NO ACTION, so they are removed first; deleting the course row
+            // then lets the database cascade to resources, quizzes, questions, options, attempts and enrolments.
             await db.QuizAnswers
                 .Where(answer => answer.QuizAttempt.Quiz.CourseId == id)
                 .ExecuteDeleteAsync(cancellationToken);
-
-            db.Courses.Remove(course);
-            await db.SaveChangesAsync(cancellationToken);
+            await db.Courses.Where(c => c.Id == id).ExecuteDeleteAsync(cancellationToken);
         }, cancellationToken);
 
         // Files are removed only after the database change has been committed.
@@ -292,7 +298,7 @@ public sealed class CourseManagementService(
             storage.Delete(file);
         }
 
-        storage.DeleteThumbnail(thumbnail);
+        storage.DeleteThumbnail(course.ThumbnailPath);
         logger.LogInformation("Course {CourseId} \"{Title}\" deleted with {FileCount} stored files.", id, course.Title, resourceFiles.Count);
         return OperationResult.Success();
     }

@@ -159,14 +159,23 @@ public sealed class FileStorageService : IFileStorageService
 
     private static string SanitizeFileName(string originalFileName, string extension)
     {
+        // Letters, digits and underscores are kept; every other run of characters becomes one hyphen,
+        // e.g. "My Diagram (final).PNG" -> "My-Diagram-final.png".
         var baseName = Path.GetFileNameWithoutExtension(Path.GetFileName(originalFileName));
         var builder = new StringBuilder(baseName.Length);
         foreach (var character in baseName)
         {
-            builder.Append(char.IsLetterOrDigit(character) || character is '-' or '_' or ' ' ? character : '-');
+            if (char.IsLetterOrDigit(character) || character == '_')
+            {
+                builder.Append(character);
+            }
+            else if (builder.Length > 0 && builder[^1] != '-')
+            {
+                builder.Append('-');
+            }
         }
 
-        var cleaned = builder.ToString().Trim(' ', '-');
+        var cleaned = builder.ToString().Trim('-');
         if (cleaned.Length > 100)
         {
             cleaned = cleaned[..100];

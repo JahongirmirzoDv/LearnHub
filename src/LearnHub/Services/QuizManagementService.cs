@@ -204,8 +204,8 @@ public sealed class QuizManagementService(
 
     public async Task<OperationResult<int>> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var quiz = await db.Quizzes.FirstOrDefaultAsync(q => q.Id == id, cancellationToken);
-        if (quiz is null)
+        var courseId = await db.Quizzes.Where(q => q.Id == id).Select(q => (int?)q.CourseId).FirstOrDefaultAsync(cancellationToken);
+        if (courseId is null)
         {
             return OperationResult<int>.NotFound();
         }
@@ -214,12 +214,11 @@ public sealed class QuizManagementService(
         {
             // Answers reference questions with NO ACTION; remove them before the quiz cascade runs.
             await db.QuizAnswers.Where(a => a.QuizAttempt.QuizId == id).ExecuteDeleteAsync(cancellationToken);
-            db.Quizzes.Remove(quiz);
-            await db.SaveChangesAsync(cancellationToken);
+            await db.Quizzes.Where(q => q.Id == id).ExecuteDeleteAsync(cancellationToken);
         }, cancellationToken);
 
         logger.LogInformation("Quiz {QuizId} deleted.", id);
-        return OperationResult<int>.Success(quiz.CourseId);
+        return OperationResult<int>.Success(courseId.Value);
     }
 
     public async Task<AdminAttemptListViewModel> GetAttemptsAsync(AdminAttemptQuery query, CancellationToken cancellationToken = default)
