@@ -2,6 +2,7 @@ using LearnHub.Data;
 using LearnHub.Models;
 using LearnHub.ViewModels.Admin;
 using LearnHub.ViewModels.Public;
+using LearnHub.ViewModels.Shared;
 using Microsoft.EntityFrameworkCore;
 
 namespace LearnHub.Services;
