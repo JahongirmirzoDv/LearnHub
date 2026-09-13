@@ -1,0 +1,204 @@
+@model ResourceDetailsViewModel
+@{
+    ViewData["Title"] = $"{Model.Title} – {Model.CourseTitle}";
+    var line = DisplayFormat.LineClass(Model.CategoryId);
+    var fileUrl = Url.Action("Open", new { id = Model.Id });
+}
+
+<section class="page-header py-4">
+    <div class="container">
+        <div class="row align-items-end g-3">
+            <div class="col-lg-8">
+                <nav aria-label="Breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a asp-controller="Courses" asp-action="Index">Courses</a></li>
+                        <li class="breadcrumb-item"><a asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">@Model.CourseTitle</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
+                    </ol>
+                </nav>
+            </div>
+            @if (Model.CanTrackProgress)
+            {
+                <div class="col-lg-4">
+                    <partial name="_ProgressRoute" model="Model.Progress" />
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<div class="page-body pt-4">
+    <div class="container lesson-layout">
+        <nav class="lesson-outline panel @line" aria-labelledby="outline-title">
+            <h2 id="outline-title" class="panel-title">Course route</h2>
+            <ol class="route">
+                @foreach (var item in Model.Outline)
+                {
+                    var isCurrent = item.Id == Model.Id;
+                    var state = isCurrent ? "is-current" : item.IsCompleted ? "is-done" : item.IsAccessible ? null : "is-locked";
+                    <li class="route-stop @state">
+                        <span class="route-marker" aria-hidden="true">
+                            @if (item.IsCompleted && !isCurrent)
+                            {
+                                <i class="bi bi-check-lg"></i>
+                            }
+                            else if (!item.IsAccessible)
+                            {
+                                <i class="bi bi-lock-fill"></i>
+                            }
+                        </span>
+                        <div class="route-body">
+                            @if (isCurrent)
+                            {
+                                <span class="route-title" aria-current="page">@item.Title</span>
+                            }
+                            else if (item.IsAccessible)
+                            {
+                                <a class="route-title" asp-action="Details" asp-route-id="@item.Id">@item.Title</a>
+                            }
+                            else
+                            {
+                                <span class="route-title text-muted-lh">@item.Title <span class="visually-hidden">(enrol to open)</span></span>
+                            }
+                            @if (item.IsCompleted)
+                            {
+                                <span class="visually-hidden">(completed)</span>
+                            }
+                        </div>
+                    </li>
+                }
+            </ol>
+            <a class="btn btn-outline-primary btn-sm w-100 mt-3" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">Course overview</a>
+        </nav>
+
+        <article class="lesson-main" aria-labelledby="lesson-title">
+            <p class="route-meta mb-2">
+                <span><i class="bi @DisplayFormat.ResourceIcon(Model.Type)" aria-hidden="true"></i>@DisplayFormat.ResourceTypeName(Model.Type)</span>
+                @if (Model.EstimatedMinutes is int minutes)
+                {
+                    <span><i class="bi bi-clock" aria-hidden="true"></i>@DisplayFormat.Duration(minutes)</span>
+                }
+                @if (Model.IsPreview)
+                {
+                    <span class="badge-state badge-state--info">Free preview</span>
+                }
+            </p>
+            <h1 id="lesson-title">@Model.Title</h1>
+            @if (!string.IsNullOrWhiteSpace(Model.Summary) && Model.Type != ResourceType.Image)
+            {
+                <p class="lead">@Model.Summary</p>
+            }
+
+            <div class="mt-4">
+                @switch (Model.Type)
+                {
+                    case ResourceType.Article:
+                        <div class="lesson-content">@Model.Body</div>
+                        break;
+
+                    case ResourceType.Video:
+                        if (Model.VideoEmbedUrl is not null)
+                        {
+                            <div class="media-frame">
+                                <iframe src="@Model.VideoEmbedUrl" title="@Model.Title (@Model.VideoProvider video)" loading="lazy"
+                                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                            </div>
+                            <p class="small text-muted-lh mt-2 mb-0">
+                                Video not loading on your network? <a href="@Model.ExternalUrl" target="_blank" rel="noopener noreferrer">Watch it on @Model.VideoProvider</a> (opens in a new tab).
+                            </p>
+                        }
+                        else
+                        {
+                            <div class="status-message status-warning" role="status">
+                                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                                <p>This video link is no longer valid. Please let the LearnHub team know through the contact page.</p>
+                            </div>
+                        }
+                        break;
+
+                    case ResourceType.Pdf:
+                        <iframe class="document-frame" src="@fileUrl" title="@Model.Title (PDF document)"></iframe>
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <a class="btn btn-primary" asp-action="Open" asp-route-id="@Model.Id" asp-route-download="true">
+                                <i class="bi bi-download" aria-hidden="true"></i>Download PDF @(Model.FileSizeBytes is long size ? $"({DisplayFormat.FileSize(size)})" : string.Empty)
+                            </a>
+                            <a class="btn btn-outline-primary" href="@fileUrl" target="_blank" rel="noopener">Open in a new tab</a>
+                        </div>
+                        break;
+
+                    case ResourceType.Image:
+                        <figure class="lesson-figure mb-0">
+                            <img src="@fileUrl" alt="@Model.Summary" />
+                            @if (!string.IsNullOrWhiteSpace(Model.Summary))
+                            {
+                                <figcaption>@Model.Summary</figcaption>
+                            }
+                        </figure>
+                        break;
+
+                    case ResourceType.Link:
+                        <a class="link-card" href="@Model.ExternalUrl" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                            <span>
+                                <strong class="d-block">Open @(Model.ExternalHost ?? "the resource")</strong>
+                                <span class="small text-muted-lh">Opens in a new tab</span>
+                            </span>
+                        </a>
+                        break;
+                }
+            </div>
+
+            <div class="lesson-actions">
+                @if (Model.CanTrackProgress)
+                {
+                    <form method="post" asp-action="ToggleComplete" asp-route-id="@Model.Id" class="d-flex flex-wrap align-items-center gap-2">
+                        @if (Model.IsCompleted)
+                        {
+                            <span class="enrolled-flag"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Completed</span>
+                            <button type="submit" class="btn btn-outline-primary btn-sm">Mark as not complete</button>
+                        }
+                        else
+                        {
+                            if (Model.Next is not null)
+                            {
+                                <button type="submit" name="nextId" value="@Model.Next.Id" class="btn btn-signal">Complete and continue</button>
+                                <button type="submit" class="btn btn-outline-primary">Mark as complete</button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-signal">Mark as complete</button>
+                            }
+                        }
+                    </form>
+                }
+                else if (User.IsAdmin())
+                {
+                    <p class="mb-0 text-muted-lh">Administrator preview: progress is only tracked for enrolled students.</p>
+                }
+                else
+                {
+                    <p class="mb-0">You are viewing a free preview. <a asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">Enrol in the course</a> to open every lesson and track your progress.</p>
+                }
+            </div>
+
+            @if (Model.Previous is not null || Model.Next is not null)
+            {
+                <nav class="lesson-pager" aria-label="Lesson navigation">
+                    @if (Model.Previous is { IsAccessible: true } previous)
+                    {
+                        <a class="pager-link" asp-action="Details" asp-route-id="@previous.Id"><span>Previous lesson</span><strong>@previous.Title</strong></a>
+                    }
+                    else
+                    {
+                        <span></span>
+                    }
+                    @if (Model.Next is { IsAccessible: true } next)
+                    {
+                        <a class="pager-link is-next" asp-action="Details" asp-route-id="@next.Id"><span>Next lesson</span><strong>@next.Title</strong></a>
+                    }
+                </nav>
+            }
+        </article>
+    </div>
+</div>

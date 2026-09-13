@@ -1,0 +1,18 @@
+@{
+    var message = TempData[StatusMessages.MessageKey] as string;
+    var kind = TempData[StatusMessages.KindKey] as string ?? nameof(StatusKind.Success);
+    var (cssClass, icon, role) = kind switch
+    {
+        nameof(StatusKind.Danger) => ("status-danger", "bi-exclamation-octagon", "alert"),
+        nameof(StatusKind.Warning) => ("status-warning", "bi-exclamation-triangle", "alert"),
+        nameof(StatusKind.Info) => ("status-info", "bi-info-circle", "status"),
+        _ => ("status-success", "bi-check-circle", "status")
+    };
+}
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="status-message @cssClass" role="@role">
+        <i class="bi @icon" aria-hidden="true"></i>
+        <p>@message</p>
+    </div>
+}

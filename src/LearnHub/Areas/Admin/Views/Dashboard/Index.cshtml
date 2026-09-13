@@ -1,0 +1,171 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Live figures for the LearnHub catalogue and learner activity.</p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn btn-outline-primary" asp-controller="Quizzes" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i>New quiz</a>
+        <a class="btn btn-primary" asp-controller="Courses" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i>New course</a>
+    </div>
+</div>
+
+<h2 class="visually-hidden">Key figures</h2>
+<dl class="stat-strip">
+    <div>
+        <dt>Published courses</dt>
+        <dd>@Model.PublishedCourseCount<span class="stat-note">@DisplayFormat.Plural(Model.DraftCourseCount, "draft")</span></dd>
+    </div>
+    <div>
+        <dt>Students</dt>
+        <dd>@Model.StudentCount<span class="stat-note">@Model.NewStudentsLast30Days new in 30 days</span></dd>
+    </div>
+    <div>
+        <dt>Enrolments</dt>
+        <dd>@Model.EnrollmentCount<span class="stat-note">@Model.EnrollmentsLast30Days in 30 days</span></dd>
+    </div>
+    <div>
+        <dt>Quiz attempts</dt>
+        <dd>@Model.AttemptCount<span class="stat-note">@(Model.PassRatePercent is int rate ? $"{rate}% passed, average {Model.AverageScorePercent}%" : "No attempts yet")</span></dd>
+    </div>
+    <div>
+        <dt>Unread messages</dt>
+        <dd>@Model.UnreadMessageCount<span class="stat-note"><a asp-controller="Messages" asp-action="Index" asp-route-unreadOnly="true">Open inbox</a></span></dd>
+    </div>
+</dl>
+
+@if (Model.ContentWarnings.Count > 0)
+{
+    <section class="panel mb-4" aria-labelledby="warnings-title">
+        <h2 id="warnings-title" class="panel-title"><i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>Needs attention</h2>
+        <ul class="warning-list">
+            @foreach (var warning in Model.ContentWarnings)
+            {
+                <li>
+                    <span>@warning.Message</span>
+                    @if (warning.Controller == "Resources")
+                    {
+                        <a class="btn btn-sm btn-outline-primary" asp-controller="Resources" asp-action="Create" asp-route-courseId="@warning.Id">Add a resource</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-sm btn-outline-primary" asp-controller="Quizzes" asp-action="Details" asp-route-id="@warning.Id">Open quiz</a>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-6">
+        <section class="panel h-100" aria-labelledby="popular-title">
+            <h2 id="popular-title" class="panel-title">Most enrolled courses</h2>
+            @if (Model.PopularCourses.Count == 0)
+            {
+                <p class="text-muted-lh mb-0">No enrolments yet.</p>
+            }
+            else
+            {
+                <ul class="bar-chart">
+                    @foreach (var bar in Model.PopularCourses)
+                    {
+                        <li>
+                            <span class="bar-label"><span>@bar.Label</span><span>@DisplayFormat.Plural(bar.Value, "learner")</span></span>
+                            <span class="bar-track" aria-hidden="true"><span class="bar-fill @DisplayFormat.ProgressWidthClass(bar.PercentOfMax)"></span></span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+    <div class="col-xl-6">
+        <section class="panel h-100" aria-labelledby="category-title">
+            <h2 id="category-title" class="panel-title">Enrolments by category</h2>
+            @if (Model.EnrollmentsByCategory.Count == 0)
+            {
+                <p class="text-muted-lh mb-0">No enrolments yet.</p>
+            }
+            else
+            {
+                <ul class="bar-chart">
+                    @foreach (var bar in Model.EnrollmentsByCategory)
+                    {
+                        <li>
+                            <span class="bar-label"><span>@bar.Label</span><span>@DisplayFormat.Plural(bar.Value, "enrolment")</span></span>
+                            <span class="bar-track" aria-hidden="true"><span class="bar-fill @DisplayFormat.ProgressWidthClass(bar.PercentOfMax)"></span></span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-6">
+        <section aria-labelledby="recent-enrolments-title">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 id="recent-enrolments-title" class="h5 mb-0">Recent enrolments</h2>
+                <a asp-controller="Enrollments" asp-action="Index">View all</a>
+            </div>
+            <div class="table-wrap">
+                <table class="table table-lh admin-table">
+                    <caption class="visually-hidden">Most recent enrolments</caption>
+                    <thead><tr><th scope="col">Student</th><th scope="col">Course</th><th scope="col">Enrolled</th></tr></thead>
+                    <tbody>
+                        @if (Model.RecentEnrollments.Count == 0)
+                        {
+                            <tr><td colspan="3" class="text-muted-lh">No enrolments yet.</td></tr>
+                        }
+                        @foreach (var enrollment in Model.RecentEnrollments)
+                        {
+                            <tr>
+                                <td>@enrollment.StudentName</td>
+                                <td><a asp-controller="Courses" asp-action="Details" asp-route-id="@enrollment.CourseId">@enrollment.CourseTitle</a></td>
+                                <td><time data-local datetime="@DisplayFormat.IsoDate(enrollment.EnrolledAt)">@DisplayFormat.Date(enrollment.EnrolledAt)</time></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="col-xl-6">
+        <section aria-labelledby="recent-attempts-title">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 id="recent-attempts-title" class="h5 mb-0">Recent quiz attempts</h2>
+                <a asp-controller="QuizAttempts" asp-action="Index">View all</a>
+            </div>
+            <div class="table-wrap">
+                <table class="table table-lh admin-table">
+                    <caption class="visually-hidden">Most recent quiz attempts</caption>
+                    <thead><tr><th scope="col">Student</th><th scope="col">Quiz</th><th scope="col" class="text-end">Score</th></tr></thead>
+                    <tbody>
+                        @if (Model.RecentAttempts.Count == 0)
+                        {
+                            <tr><td colspan="3" class="text-muted-lh">No quiz attempts yet.</td></tr>
+                        }
+                        @foreach (var attempt in Model.RecentAttempts)
+                        {
+                            <tr>
+                                <td>@attempt.StudentName</td>
+                                <td><a asp-controller="QuizAttempts" asp-action="Details" asp-route-id="@attempt.AttemptId">@attempt.QuizTitle</a></td>
+                                <td class="text-end"><span class="score-pill @(attempt.Passed ? "is-passed" : null)">@attempt.ScorePercent%</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<p class="text-muted-lh small mt-4 mb-0">
+    Catalogue: @DisplayFormat.Plural(Model.CategoryCount, "category", "categories"), @DisplayFormat.Plural(Model.ResourceCount, "learning resource")
+    and @DisplayFormat.Plural(Model.QuizCount, "quiz", "quizzes").
+</p>

@@ -1,0 +1,39 @@
+@model QuizFormViewModel
+<div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+
+<div class="form-panel">
+    <div class="row g-3">
+        <div class="col-md-8">
+            <label asp-for="CourseId" class="form-label"></label>
+            <select asp-for="CourseId" asp-items="@(new SelectList(Model.CourseOptions, nameof(SelectOption.Id), nameof(SelectOption.Name)))" class="form-select">
+                <option value="">Choose a course</option>
+            </select>
+            <span asp-validation-for="CourseId"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="PassMarkPercent" class="form-label"></label>
+            <input asp-for="PassMarkPercent" class="form-control" min="0" max="100" />
+            <span asp-validation-for="PassMarkPercent"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Title" class="form-label"></label>
+            <input asp-for="Title" class="form-control" data-char-counter />
+            <span asp-validation-for="Title"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Description" class="form-label"></label>
+            <textarea asp-for="Description" class="form-control" rows="3" data-char-counter></textarea>
+            <span asp-validation-for="Description"></span>
+        </div>
+        @if (Model.Id is not null)
+        {
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input asp-for="IsPublished" class="form-check-input" role="switch" />
+                    <label asp-for="IsPublished" class="form-check-label"></label>
+                </div>
+                <p class="form-text mb-0">A quiz needs at least one question before it can be published.</p>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,15 @@
+@{
+    ViewData["Title"] = "Access denied";
+}
+
+<div class="container error-page">
+    <div>
+        <span class="error-code" aria-hidden="true">403</span>
+        <h1 class="h2 mt-3">You don't have access to this page</h1>
+        <p>Your account doesn't include permission for this area. If you think it should, contact the LearnHub team.</p>
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+            <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Go to the home page</a>
+            <a class="btn btn-outline-primary" asp-controller="Home" asp-action="Contact">Contact us</a>
+        </div>
+    </div>
+</div>

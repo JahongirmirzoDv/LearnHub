@@ -1,0 +1,209 @@
+@model AdminCourseDetailsViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Courses</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
+    </ol>
+</nav>
+
+<div class="admin-page-header">
+    <div>
+        <h1>@Model.Title</h1>
+        <p>
+            @if (Model.IsPublished)
+            {
+                <span class="badge-state badge-state--live me-2">Published</span>
+            }
+            else
+            {
+                <span class="badge-state badge-state--draft me-2">Draft</span>
+            }
+            @Model.CategoryName
+        </p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn btn-outline-primary" asp-area="" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.Id"><i class="bi bi-eye" aria-hidden="true"></i>View on website</a>
+        <form method="post" asp-action="TogglePublished" asp-route-id="@Model.Id">
+            <button type="submit" class="btn btn-outline-primary">
+                @if (Model.IsPublished)
+                {
+                    <i class="bi bi-eye-slash" aria-hidden="true"></i><text>Move to drafts</text>
+                }
+                else
+                {
+                    <i class="bi bi-send-check" aria-hidden="true"></i><text>Publish</text>
+                }
+            </button>
+        </form>
+        <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil" aria-hidden="true"></i>Edit</a>
+        <a class="btn btn-outline-danger" asp-action="Delete" asp-route-id="@Model.Id"><i class="bi bi-trash" aria-hidden="true"></i>Delete</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-4">
+        <section class="panel" aria-labelledby="summary-title">
+            <h2 id="summary-title" class="visually-hidden">Course summary</h2>
+            <div class="thumb-preview mb-3">
+                <course-cover path="@Model.ThumbnailPath" eager="true" />
+            </div>
+            <p class="text-muted-lh">@Model.ShortDescription</p>
+            <dl class="definition-grid">
+                <dt>Level</dt>
+                <dd><span class="@DisplayFormat.DifficultyBadgeClass(Model.Difficulty)">@Model.Difficulty</span></dd>
+                <dt>Duration</dt>
+                <dd>@DisplayFormat.Duration(Model.DurationMinutes)</dd>
+                <dt>Instructor</dt>
+                <dd>@Model.InstructorName</dd>
+                <dt>Learners</dt>
+                <dd><a asp-controller="Enrollments" asp-action="Index" asp-route-courseId="@Model.Id">@Model.EnrollmentCount</a></dd>
+                <dt>Quiz attempts</dt>
+                <dd>@Model.AttemptCount</dd>
+                <dt>Created</dt>
+                <dd><time data-local datetime="@DisplayFormat.IsoDate(Model.CreatedAt)">@DisplayFormat.Date(Model.CreatedAt)</time></dd>
+                <dt>Updated</dt>
+                <dd><time data-local datetime="@DisplayFormat.IsoDate(Model.UpdatedAt)">@DisplayFormat.Date(Model.UpdatedAt)</time></dd>
+            </dl>
+        </section>
+    </div>
+
+    <div class="col-xl-8">
+        <section class="mb-4" aria-labelledby="resources-title">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <h2 id="resources-title" class="h5 mb-0">Learning resources</h2>
+                <a class="btn btn-sm btn-primary" asp-controller="Resources" asp-action="Create" asp-route-courseId="@Model.Id"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add resource</a>
+            </div>
+            @if (Model.Resources.Count == 0)
+            {
+                <div class="empty-state">
+                    <span class="empty-icon" aria-hidden="true"><i class="bi bi-collection-play"></i></span>
+                    <h3>No resources yet</h3>
+                    <p>Add articles, videos, PDFs, images or links to build the course route.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table table-lh admin-table table-stack">
+                        <caption class="visually-hidden">Resources in this course, in route order</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" class="num">Order</th>
+                                <th scope="col">Resource</th>
+                                <th scope="col">Access</th>
+                                <th scope="col" class="num">Completed by</th>
+                                <th scope="col"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var resource in Model.Resources)
+                            {
+                                <tr>
+                                    <td class="num" data-label="Order">@resource.SortOrder</td>
+                                    <td class="cell-primary">
+                                        <span class="cell-title">@resource.Title</span>
+                                        <span class="cell-sub"><i class="bi @DisplayFormat.ResourceIcon(resource.Type) me-1" aria-hidden="true"></i>@DisplayFormat.ResourceTypeName(resource.Type)</span>
+                                    </td>
+                                    <td data-label="Access">
+                                        @if (resource.IsPreview)
+                                        {
+                                            <span class="badge-state badge-state--info">Free preview</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-state">Enrolled only</span>
+                                        }
+                                    </td>
+                                    <td class="num" data-label="Completed by">@resource.CompletionCount</td>
+                                    <td class="cell-actions">
+                                        <a class="btn btn-sm btn-outline-primary" asp-area="" asp-controller="Resources" asp-action="Details" asp-route-id="@resource.Id">Open<span class="visually-hidden"> @resource.Title</span></a>
+                                        <a class="btn btn-sm btn-outline-primary" asp-controller="Resources" asp-action="Edit" asp-route-id="@resource.Id">Edit<span class="visually-hidden"> @resource.Title</span></a>
+                                        <a class="btn btn-sm btn-outline-danger" asp-controller="Resources" asp-action="Delete" asp-route-id="@resource.Id">Delete<span class="visually-hidden"> @resource.Title</span></a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="mb-4" aria-labelledby="quizzes-title">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <h2 id="quizzes-title" class="h5 mb-0">Quizzes</h2>
+                <a class="btn btn-sm btn-primary" asp-controller="Quizzes" asp-action="Create" asp-route-courseId="@Model.Id"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add quiz</a>
+            </div>
+            @if (Model.Quizzes.Count == 0)
+            {
+                <p class="text-muted-lh">This course has no quiz yet.</p>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table table-lh admin-table table-stack">
+                        <caption class="visually-hidden">Quizzes in this course</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Quiz</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="num">Questions</th>
+                                <th scope="col" class="num">Attempts</th>
+                                <th scope="col"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var quiz in Model.Quizzes)
+                            {
+                                <tr>
+                                    <td class="cell-primary"><a class="cell-title" asp-controller="Quizzes" asp-action="Details" asp-route-id="@quiz.Id">@quiz.Title</a><span class="cell-sub">Pass mark @quiz.PassMarkPercent%</span></td>
+                                    <td data-label="Status">
+                                        @if (quiz.IsPublished)
+                                        {
+                                            <span class="badge-state badge-state--live">Published</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-state badge-state--draft">Draft</span>
+                                        }
+                                    </td>
+                                    <td class="num" data-label="Questions">@quiz.QuestionCount</td>
+                                    <td class="num" data-label="Attempts">@quiz.AttemptCount</td>
+                                    <td class="cell-actions">
+                                        <a class="btn btn-sm btn-outline-primary" asp-controller="Quizzes" asp-action="Details" asp-route-id="@quiz.Id">Manage<span class="visually-hidden"> @quiz.Title</span></a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section aria-labelledby="enrolments-title">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <h2 id="enrolments-title" class="h5 mb-0">Latest enrolments</h2>
+                <a class="btn btn-sm btn-outline-primary" asp-controller="Enrollments" asp-action="Create" asp-route-courseId="@Model.Id">Enrol a student</a>
+            </div>
+            @if (Model.RecentEnrollments.Count == 0)
+            {
+                <p class="text-muted-lh">No students have enrolled yet.</p>
+            }
+            else
+            {
+                <ul class="list-group">
+                    @foreach (var enrollment in Model.RecentEnrollments)
+                    {
+                        <li class="list-group-item d-flex justify-content-between gap-2">
+                            <span>@enrollment.StudentName</span>
+                            <time class="text-muted-lh" data-local datetime="@DisplayFormat.IsoDate(enrollment.EnrolledAt)">@DisplayFormat.Date(enrollment.EnrolledAt)</time>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+</div>

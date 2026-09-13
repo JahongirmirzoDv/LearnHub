@@ -12,6 +12,8 @@ public sealed class ResourceDetailsViewModel
 
     public string CourseTitle { get; init; } = string.Empty;
 
+    public int CategoryId { get; init; }
+
     public string Title { get; init; } = string.Empty;
 
     public string? Summary { get; init; }

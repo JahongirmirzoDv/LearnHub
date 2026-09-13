@@ -1,0 +1,35 @@
+@model ResourceFormViewModel
+@{
+    ViewData["Title"] = $"Edit {Model.Title}";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Resources</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Edit</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>Edit learning resource</h1>
+        <p>Students see your changes the next time they open the lesson.</p>
+    </div>
+    @if (Model.Id is int resourceId)
+    {
+        <div class="admin-actions">
+            <a class="btn btn-outline-primary" asp-area="" asp-controller="Resources" asp-action="Details" asp-route-id="@resourceId"><i class="bi bi-eye" aria-hidden="true"></i>Preview</a>
+        </div>
+    }
+</div>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" enctype="multipart/form-data" novalidate>
+    <partial name="_ResourceForm" model="Model" />
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save changes</button>
+        <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

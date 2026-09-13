@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="@(ViewData["Description"] ?? "LearnHub is a web-based learning management system with courses, lessons, quizzes and progress tracking.")" />
+    <meta name="theme-color" content="#1b2438" />
+    <title>@(ViewData["Title"] is string title ? $"{title} | LearnHub" : "LearnHub – Web-Based Learning Management System")</title>
+    <link rel="icon" href="~/images/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="~/lib/overpass/overpass-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-header">
+        <nav class="navbar navbar-expand-lg" aria-label="Main navigation">
+            <div class="container">
+                <a class="brand" asp-controller="Home" asp-action="Index">
+                    <partial name="_BrandMark" />
+                    <span>LearnHub</span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav"
+                        aria-controls="main-nav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="main-nav">
+                    <ul class="navbar-nav me-auto mt-3 mt-lg-0">
+                        <li class="nav-item"><a class="nav-link" lh-nav="Home" lh-nav-action="Index" asp-controller="Home" asp-action="Index">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" lh-nav="Courses,Resources" asp-controller="Courses" asp-action="Index">Courses</a></li>
+                        @if (User.IsStudent())
+                        {
+                            <li class="nav-item"><a class="nav-link" lh-nav="Student" lh-nav-action="MyCourses" asp-controller="Student" asp-action="MyCourses">My Courses</a></li>
+                            <li class="nav-item"><a class="nav-link" lh-nav="Student" lh-nav-action="Dashboard" asp-controller="Student" asp-action="Dashboard">Dashboard</a></li>
+                        }
+                        else if (!User.IsAdmin())
+                        {
+                            <li class="nav-item"><a class="nav-link" lh-nav="Home" lh-nav-action="About" asp-controller="Home" asp-action="About">About</a></li>
+                            <li class="nav-item"><a class="nav-link" lh-nav="Home" lh-nav-action="Contact" asp-controller="Home" asp-action="Contact">Contact</a></li>
+                        }
+                        @if (User.IsAdmin())
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-area="Admin" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>Admin Dashboard</a></li>
+                        }
+                    </ul>
+
+                    <ul class="navbar-nav align-items-lg-center gap-2 pb-3 pb-lg-0">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item dropdown">
+                                <button class="btn btn-link nav-link dropdown-toggle user-chip" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="avatar" aria-hidden="true">@DisplayFormat.Initials(User.GetDisplayName())</span>
+                                    <span>@User.GetDisplayName()</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    @if (User.IsStudent())
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="Student" asp-action="Dashboard"><i class="bi bi-signpost-2" aria-hidden="true"></i>Dashboard</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Quizzes" asp-action="History"><i class="bi bi-clipboard-check" aria-hidden="true"></i>Quiz results</a></li>
+                                    }
+                                    @if (User.IsAdmin())
+                                    {
+                                        <li><a class="dropdown-item" asp-area="Admin" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-speedometer2" aria-hidden="true"></i>Admin dashboard</a></li>
+                                    }
+                                    <li><a class="dropdown-item" asp-controller="Profile" asp-action="Index"><i class="bi bi-person" aria-hidden="true"></i>Profile</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <form method="post" asp-controller="Account" asp-action="Logout">
+                                            <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Log out</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item"><a class="nav-link" lh-nav="Account" lh-nav-action="Login" asp-controller="Account" asp-action="Login">Log in</a></li>
+                            <li class="nav-item"><a class="btn btn-primary" asp-controller="Account" asp-action="Register">Register</a></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+        @if (TempData.Peek(StatusMessages.MessageKey) is string)
+        {
+            <div class="container pt-3">
+                <partial name="_StatusMessage" />
+            </div>
+        }
+        @RenderSection("Hero", required: false)
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="row gy-4">
+                <div class="col-lg-5">
+                    <div class="footer-lines" aria-hidden="true">
+                        <span class="line-1"></span><span class="line-2"></span><span class="line-3"></span>
+                        <span class="line-4"></span><span class="line-5"></span><span class="line-6"></span>
+                    </div>
+                    <a class="brand mb-2" asp-controller="Home" asp-action="Index">
+                        <partial name="_BrandMark" />
+                        <span>LearnHub</span>
+                    </a>
+                    <p class="text-muted-lh mb-0">Structured courses, clear lessons and honest progress tracking for computing students.</p>
+                </div>
+                <div class="col-6 col-lg-2 offset-lg-1">
+                    <h2>Explore</h2>
+                    <ul>
+                        <li><a asp-controller="Courses" asp-action="Index">All courses</a></li>
+                        <li><a asp-controller="Home" asp-action="About">About LearnHub</a></li>
+                        <li><a asp-controller="Home" asp-action="Contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <h2>Account</h2>
+                    <ul>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li><a asp-controller="Profile" asp-action="Index">Profile</a></li>
+                        }
+                        else
+                        {
+                            <li><a asp-controller="Account" asp-action="Register">Create an account</a></li>
+                            <li><a asp-controller="Account" asp-action="Login">Log in</a></li>
+                        }
+                        <li><a asp-controller="Home" asp-action="Privacy">Privacy</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2">
+                    <h2>Project</h2>
+                    <p class="text-muted-lh mb-0">CT050-3-2-WAPP Web Applications group assignment, Asia Pacific University.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>&copy; @DateTime.UtcNow.Year LearnHub project team</span>
+                <span>Built with ASP.NET Core MVC and Entity Framework Core</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

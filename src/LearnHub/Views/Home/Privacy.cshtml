@@ -1,0 +1,42 @@
+@{
+    ViewData["Title"] = "Privacy";
+}
+
+<section class="page-header">
+    <div class="container">
+        <h1>Privacy notice</h1>
+        <p>What LearnHub stores about you, why, and how it is protected.</p>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        <div class="prose">
+            <h2 class="h4">Information we store</h2>
+            <ul>
+                <li><strong>Account details:</strong> your full name, email address and an optional short bio.</li>
+                <li><strong>Learning activity:</strong> the courses you enrol in, the lessons you mark complete and your quiz answers and scores.</li>
+                <li><strong>Contact messages:</strong> the name, email address and message you send through the contact page.</li>
+            </ul>
+
+            <h2 class="h4 mt-4">How your information is used</h2>
+            <p>Your information is used only to run LearnHub: to sign you in, show your progress and quiz results, and let administrators support students. It is not sold or shared with advertisers.</p>
+
+            <h2 class="h4 mt-4">How it is protected</h2>
+            <ul>
+                <li>Passwords are never stored. ASP.NET Core Identity keeps a salted, one-way hash instead.</li>
+                <li>All pages are served over HTTPS in production and the sign-in cookie cannot be read by JavaScript.</li>
+                <li>Each student can only see their own quiz results and progress.</li>
+            </ul>
+
+            <h2 class="h4 mt-4">Cookies</h2>
+            <p>LearnHub uses only essential cookies: one keeps you signed in, one protects forms against cross-site request forgery and one carries short confirmation messages between pages. There are no tracking or advertising cookies.</p>
+
+            <h2 class="h4 mt-4">Embedded videos and links</h2>
+            <p>Some lessons embed YouTube videos in privacy-enhanced mode or link to external documentation. Those websites have their own privacy policies.</p>
+
+            <h2 class="h4 mt-4">Your choices</h2>
+            <p>You can update your name and bio on your profile page. To have your account and learning records deleted, <a asp-controller="Home" asp-action="Contact">contact the LearnHub team</a>.</p>
+        </div>
+    </div>
+</div>

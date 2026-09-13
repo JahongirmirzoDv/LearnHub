@@ -1,0 +1,81 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Create an account";
+}
+
+<div class="container">
+    <div class="auth-shell">
+        <section class="auth-card form-panel" aria-labelledby="register-title">
+            <h1 id="register-title">Create your student account</h1>
+            <p class="text-muted-lh">Already registered? <a asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl">Log in</a>.</p>
+
+            <form method="post" asp-action="Register" novalidate>
+                <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+                <input type="hidden" asp-for="ReturnUrl" />
+
+                <div class="mb-3">
+                    <label asp-for="FullName" class="form-label"></label>
+                    <input asp-for="FullName" class="form-control" autocomplete="name" data-char-counter />
+                    <span asp-validation-for="FullName"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" autocomplete="email" />
+                    <span asp-validation-for="Email"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" autocomplete="new-password" data-password-meter="password-meter" aria-describedby="password-help" />
+                    <div class="password-meter" id="password-meter" data-score="0" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                    <div class="form-text" aria-live="polite"></div>
+                    <div id="password-help" class="form-text">@PasswordRules.Description</div>
+                    <span asp-validation-for="Password"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                    <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="ConfirmPassword"></span>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="AcceptTerms" class="form-check-input" />
+                    <label asp-for="AcceptTerms" class="form-check-label">
+                        I will use LearnHub for learning and I have read the <a asp-controller="Home" asp-action="Privacy" target="_blank" rel="noopener">privacy notice</a>
+                    </label>
+                    <span asp-validation-for="AcceptTerms"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">Create account</button>
+            </form>
+        </section>
+
+        <aside class="auth-aside" aria-labelledby="register-benefits">
+            <h2 id="register-benefits">What your account includes</h2>
+            <ol class="route line-6">
+                <li class="route-stop is-current">
+                    <span class="route-marker" aria-hidden="true"></span>
+                    <div class="route-body"><span class="route-title">Enrol in any published course for free</span></div>
+                </li>
+                <li class="route-stop">
+                    <span class="route-marker" aria-hidden="true"></span>
+                    <div class="route-body"><span class="route-title">Open every lesson, video and PDF reference</span></div>
+                </li>
+                <li class="route-stop">
+                    <span class="route-marker" aria-hidden="true"></span>
+                    <div class="route-body"><span class="route-title">Take quizzes and review explained answers</span></div>
+                </li>
+                <li class="route-stop">
+                    <span class="route-marker" aria-hidden="true"></span>
+                    <div class="route-body"><span class="route-title">Track your progress on a personal dashboard</span></div>
+                </li>
+            </ol>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

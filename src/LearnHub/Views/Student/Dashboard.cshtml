@@ -1,0 +1,187 @@
+@model StudentDashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<section class="page-header">
+    <div class="container d-flex flex-wrap align-items-end justify-content-between gap-3">
+        <div>
+            <h1>Welcome back, @Model.FirstName</h1>
+            <p>
+                @if (Model.EnrolledCount == 0)
+                {
+                    <text>You haven't enrolled in a course yet. Choose one to start your first route.</text>
+                }
+                else
+                {
+                    <text>You have completed @Model.OverallProgressPercent% of your enrolled courses. Keep going.</text>
+                }
+            </p>
+        </div>
+        <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Index"><i class="bi bi-search" aria-hidden="true"></i>Browse courses</a>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        <h2 class="visually-hidden">Learning summary</h2>
+        <dl class="journey-strip mb-5">
+            <div><dt>Enrolled courses</dt><dd>@Model.EnrolledCount</dd></div>
+            <div><dt>Completed courses</dt><dd>@Model.CompletedCount</dd></div>
+            <div><dt>Lessons completed</dt><dd>@Model.CompletedResourceCount</dd></div>
+            <div><dt>Quizzes passed</dt><dd>@Model.QuizzesPassedCount</dd></div>
+            <div><dt>Courses you can still join</dt><dd>@Model.AvailableCourseCount</dd></div>
+        </dl>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <section class="mb-5" aria-labelledby="continue-title">
+                    <div class="section-heading">
+                        <div>
+                            <h2 id="continue-title" class="h3">Continue learning</h2>
+                            <p>Your next lesson in each course you are taking.</p>
+                        </div>
+                        @if (Model.InProgressCount > 0)
+                        {
+                            <a class="btn btn-link" asp-action="MyCourses">All my courses</a>
+                        }
+                    </div>
+
+                    @if (Model.ContinueLearning.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <span class="empty-icon" aria-hidden="true"><i class="bi bi-signpost-split"></i></span>
+                            <h3>@(Model.EnrolledCount == 0 ? "No courses in progress" : "Every enrolled course is complete")</h3>
+                            <p>@(Model.EnrolledCount == 0 ? "Enrol in a course and your next lesson will appear here." : "Great work. Find a new course to keep learning.")</p>
+                            <a class="btn btn-primary" asp-controller="Courses" asp-action="Index">Find a course</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="continue-list">
+                            @foreach (var item in Model.ContinueLearning)
+                            {
+                                <li class="continue-item @DisplayFormat.LineClass(item.Course.CategoryId)">
+                                    <course-cover path="@item.Course.ThumbnailPath" icon="@item.Course.CategoryIcon" />
+                                    <div>
+                                        <h3><a asp-controller="Courses" asp-action="Details" asp-route-id="@item.Course.Id">@item.Course.Title</a></h3>
+                                        <partial name="_ProgressRoute" model="item.Progress" />
+                                        @if (item.NextResourceTitle is not null)
+                                        {
+                                            <p class="small text-muted-lh mt-1 mb-0">Next: @item.NextResourceTitle</p>
+                                        }
+                                    </div>
+                                    <div class="continue-action">
+                                        @if (item.NextResourceId is int nextId)
+                                        {
+                                            <a class="btn btn-signal w-100" asp-controller="Resources" asp-action="Details" asp-route-id="@nextId">Resume</a>
+                                        }
+                                        else
+                                        {
+                                            <a class="btn btn-signal w-100" asp-controller="Courses" asp-action="Details" asp-route-id="@item.Course.Id">Take the quiz</a>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+
+                <section aria-labelledby="results-title">
+                    <div class="section-heading">
+                        <div>
+                            <h2 id="results-title" class="h3">Recent quiz results</h2>
+                            <p>@(Model.AverageQuizScore is int average ? $"Your average best score is {average}%." : "Your results appear here after your first quiz.")</p>
+                        </div>
+                        @if (Model.RecentQuizResults.Count > 0)
+                        {
+                            <a class="btn btn-link" asp-controller="Quizzes" asp-action="History">All results</a>
+                        }
+                    </div>
+
+                    @if (Model.RecentQuizResults.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <span class="empty-icon" aria-hidden="true"><i class="bi bi-clipboard-check"></i></span>
+                            <h3>No quiz attempts yet</h3>
+                            <p>Each course ends with a short quiz. Your scores and explanations will be listed here.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-wrap">
+                            <table class="table table-lh table-hover">
+                                <caption class="visually-hidden">Your five most recent quiz attempts</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Quiz</th>
+                                        <th scope="col">Submitted</th>
+                                        <th scope="col" class="text-end">Score</th>
+                                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var attempt in Model.RecentQuizResults)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@attempt.QuizTitle</strong>
+                                                <span class="d-block small text-muted-lh">@attempt.CourseTitle</span>
+                                            </td>
+                                            <td><time data-local datetime="@DisplayFormat.IsoDate(attempt.SubmittedAt)">@DisplayFormat.Date(attempt.SubmittedAt)</time></td>
+                                            <td class="text-end"><span class="score-pill @(attempt.Passed ? "is-passed" : null)">@attempt.ScorePercent%</span></td>
+                                            <td class="text-end"><a asp-controller="Quizzes" asp-action="Result" asp-route-id="@attempt.AttemptId">Review<span class="visually-hidden"> @attempt.QuizTitle</span></a></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </section>
+            </div>
+
+            <div class="col-lg-4">
+                <section class="panel mb-4" aria-labelledby="activity-title">
+                    <h2 id="activity-title" class="panel-title">Recent activity</h2>
+                    @if (Model.RecentActivity.Count == 0)
+                    {
+                        <p class="text-muted-lh mb-0">Your enrolments, completed lessons and quiz attempts will appear here.</p>
+                    }
+                    else
+                    {
+                        <ol class="timeline">
+                            @foreach (var activity in Model.RecentActivity)
+                            {
+                                var presentation = DisplayFormat.Activity(activity.Kind);
+                                <li class="timeline-item">
+                                    <span class="timeline-icon @presentation.IconClass" aria-hidden="true"><i class="bi @presentation.Icon"></i></span>
+                                    <div>
+                                        <p class="timeline-text"><a asp-controller="@presentation.Controller" asp-action="@presentation.Action" asp-route-id="@activity.TargetId">@activity.Text</a></p>
+                                        <time class="timeline-time" data-local="datetime" datetime="@DisplayFormat.IsoDate(activity.OccurredAt)">@DisplayFormat.DateAndTime(activity.OccurredAt)</time>
+                                    </div>
+                                </li>
+                            }
+                        </ol>
+                    }
+                </section>
+
+                <section aria-labelledby="recommended-title">
+                    <h2 id="recommended-title" class="h5 mb-3">Recommended for you</h2>
+                    @if (Model.RecommendedCourses.Count == 0)
+                    {
+                        <p class="text-muted-lh">You are enrolled in every published course.</p>
+                    }
+                    else
+                    {
+                        <div class="d-grid gap-3">
+                            @foreach (var course in Model.RecommendedCourses)
+                            {
+                                <partial name="_CourseCard" model="course" />
+                            }
+                        </div>
+                    }
+                </section>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,36 @@
+@model ResourceFormViewModel
+@{
+    ViewData["Title"] = "New resource";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Resources</a></li>
+        <li class="breadcrumb-item active" aria-current="page">New resource</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>New learning resource</h1>
+        <p>Choose the type first; the form shows the fields that type needs.</p>
+    </div>
+</div>
+
+<form method="post" asp-action="Create" enctype="multipart/form-data" novalidate>
+    <partial name="_ResourceForm" model="Model" />
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Add resource</button>
+        @if (Model.CourseId is int courseId)
+        {
+            <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Details" asp-route-id="@courseId">Cancel</a>
+        }
+        else
+        {
+            <a class="btn btn-outline-primary" asp-action="Index">Cancel</a>
+        }
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

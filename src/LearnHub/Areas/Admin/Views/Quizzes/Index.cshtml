@@ -1,0 +1,102 @@
+@model AdminQuizListViewModel
+@{
+    ViewData["Title"] = "Quizzes";
+    var query = Model.Query;
+    var pagination = new PaginationViewModel(Model.Results.Page, Model.Results.TotalPages, "Index", query.ToRouteValues());
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1>Quizzes</h1>
+        <p>Quizzes check understanding at the end of a course. Students only see published quizzes that have questions.</p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn btn-primary" asp-action="Create" asp-route-courseId="@query.CourseId"><i class="bi bi-plus-lg" aria-hidden="true"></i>New quiz</a>
+    </div>
+</div>
+
+<form class="filter-bar" method="get" asp-action="Index" role="search" aria-label="Filter quizzes">
+    <div>
+        <label class="form-label" for="q">Search</label>
+        <input id="q" name="q" type="search" class="form-control" value="@query.Q" placeholder="Quiz title" maxlength="100" />
+    </div>
+    <div>
+        <label class="form-label" for="courseId">Course</label>
+        <select id="courseId" name="courseId" class="form-select" data-auto-submit>
+            <option value="">All courses</option>
+            @foreach (var course in Model.Courses)
+            {
+                <option value="@course.Id" selected="@(course.Id == query.CourseId)">@course.Name</option>
+            }
+        </select>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">Apply</button>
+        <a class="btn btn-link" asp-action="Index">Reset</a>
+    </div>
+</form>
+
+@if (Model.Results.TotalCount == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-patch-question"></i></span>
+        <h2>No quizzes found</h2>
+        <p>Create a quiz for a course, then add its questions.</p>
+        <a class="btn btn-primary" asp-action="Create" asp-route-courseId="@query.CourseId">Create a quiz</a>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="table table-lh table-hover admin-table table-stack">
+            <caption class="visually-hidden">Quizzes</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Quiz</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="num">Questions</th>
+                    <th scope="col" class="num">Attempts</th>
+                    <th scope="col" class="num">Pass mark</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var quiz in Model.Results.Items)
+                {
+                    <tr>
+                        <td class="cell-primary">
+                            <a class="cell-title" asp-action="Details" asp-route-id="@quiz.Id">@quiz.Title</a>
+                            <span class="cell-sub">@quiz.CourseTitle</span>
+                        </td>
+                        <td data-label="Status">
+                            @if (!quiz.IsPublished)
+                            {
+                                <span class="badge-state badge-state--draft">Draft</span>
+                            }
+                            else if (quiz.QuestionCount == 0)
+                            {
+                                <span class="badge-state badge-state--warn">Published, no questions</span>
+                            }
+                            else
+                            {
+                                <span class="badge-state badge-state--live">Published</span>
+                            }
+                        </td>
+                        <td class="num" data-label="Questions">@quiz.QuestionCount</td>
+                        <td class="num" data-label="Attempts"><a asp-controller="QuizAttempts" asp-action="Index" asp-route-quizId="@quiz.Id">@quiz.AttemptCount</a></td>
+                        <td class="num" data-label="Pass mark">@quiz.PassMarkPercent%</td>
+                        <td class="cell-actions">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@quiz.Id">Questions<span class="visually-hidden"> for @quiz.Title</span></a>
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@quiz.Id">Edit<span class="visually-hidden"> @quiz.Title</span></a>
+                            <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@quiz.Id">Delete<span class="visually-hidden"> @quiz.Title</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer mt-3">
+        <span>Showing @Model.Results.FirstItemNumber–@Model.Results.LastItemNumber of @Model.Results.TotalCount</span>
+        <partial name="_Pagination" model="pagination" />
+    </div>
+}

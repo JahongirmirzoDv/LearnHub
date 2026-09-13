@@ -1,0 +1,68 @@
+@model ContactViewModel
+@{
+    ViewData["Title"] = "Contact";
+    ViewData["Description"] = "Send a question or suggestion to the LearnHub team.";
+}
+
+<section class="page-header">
+    <div class="container">
+        <h1>Contact the LearnHub team</h1>
+        <p>Questions about a course, a problem with your account or an idea for a new topic? Send us a message.</p>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <form method="post" asp-action="Contact" class="form-panel" novalidate>
+                    <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Name" class="form-label"></label>
+                            <input asp-for="Name" class="form-control" autocomplete="name" />
+                            <span asp-validation-for="Name"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label"></label>
+                            <input asp-for="Email" class="form-control" autocomplete="email" />
+                            <span asp-validation-for="Email"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Subject" class="form-label"></label>
+                            <input asp-for="Subject" class="form-control" data-char-counter />
+                            <span asp-validation-for="Subject"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Message" class="form-label"></label>
+                            <textarea asp-for="Message" class="form-control" rows="7" data-char-counter></textarea>
+                            <span asp-validation-for="Message"></span>
+                        </div>
+                        <div class="honeypot" aria-hidden="true">
+                            <label asp-for="Website"></label>
+                            <input asp-for="Website" tabindex="-1" autocomplete="off" />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-4"><i class="bi bi-send" aria-hidden="true"></i>Send message</button>
+                </form>
+            </div>
+
+            <aside class="col-lg-5" aria-labelledby="contact-info-title">
+                <div class="panel">
+                    <h2 id="contact-info-title" class="panel-title">Before you write</h2>
+                    <ul class="list-unstyled d-grid gap-3 mb-0">
+                        <li class="d-flex gap-2"><i class="bi bi-clock-history" aria-hidden="true"></i><span>We reply within two working days, Monday to Friday.</span></li>
+                        <li class="d-flex gap-2"><i class="bi bi-lock" aria-hidden="true"></i><span>Never include your password. The LearnHub team will never ask for it.</span></li>
+                        <li class="d-flex gap-2"><i class="bi bi-question-circle" aria-hidden="true"></i><span>For problems with a lesson, name the course and lesson so we can find it quickly.</span></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

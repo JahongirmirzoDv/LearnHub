@@ -1,0 +1,136 @@
+@model HomeViewModel
+@{
+    ViewData["Description"] = "Free online courses in programming, web development, databases, cybersecurity, networking and cloud computing, with lessons, quizzes and progress tracking.";
+}
+
+@section Hero {
+    <section class="hero" aria-labelledby="hero-title">
+        <div class="container hero-grid">
+            <div>
+                <h1 class="hero-title" id="hero-title">Build real computing skills, one lesson at a time.</h1>
+                <p class="hero-lead">
+                    LearnHub brings together courses in programming, web development, databases, security, networking and the cloud.
+                    Enrol for free, work through every lesson and quiz, and always see how far you have come.
+                </p>
+
+                <form class="hero-search" role="search" method="get" asp-controller="Courses" asp-action="Index">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <label for="hero-search" class="visually-hidden">Search courses</label>
+                    <input id="hero-search" name="q" type="search" class="form-control" maxlength="100" autocomplete="off"
+                           placeholder="Search for SQL, security, ASP.NET…" />
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </form>
+
+                <p class="hero-summary">
+                    @DisplayFormat.Plural(Model.PublishedCourseCount, "course"), @DisplayFormat.Plural(Model.ResourceCount, "lesson")
+                    and @DisplayFormat.Plural(Model.QuizCount, "quiz", "quizzes"), used by @DisplayFormat.Plural(Model.LearnerCount, "registered student").
+                </p>
+
+                <ul class="line-list mt-4 d-lg-none" aria-label="Browse by category">
+                    @foreach (var category in Model.Categories)
+                    {
+                        <li>
+                            <a class="line-chip @DisplayFormat.LineClass(category.Id)" asp-controller="Courses" asp-action="Index" asp-route-categoryId="@category.Id">
+                                <span class="line-dot" aria-hidden="true"><i class="@("bi bi-" + category.IconName)"></i></span>
+                                @category.Name
+                                <span class="line-count">@category.CourseCount</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <div class="d-none d-lg-block">
+                @InterchangeMap.Render(Model.Categories, id => Url.Action("Index", "Courses", new { categoryId = id }))
+            </div>
+        </div>
+    </section>
+}
+
+<section class="section" aria-labelledby="popular-title">
+    <div class="container">
+        <div class="section-heading">
+            <div>
+                <h2 id="popular-title">Popular courses</h2>
+                <p>The courses students enrol in most often.</p>
+            </div>
+            <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Index">Browse all courses</a>
+        </div>
+
+        @if (Model.PopularCourses.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="bi bi-journal-plus"></i></span>
+                <h3>No courses are published yet</h3>
+                <p>Courses appear here as soon as an administrator publishes them.</p>
+            </div>
+        }
+        else
+        {
+            <div class="course-grid">
+                @foreach (var course in Model.PopularCourses)
+                {
+                    <partial name="_CourseCard" model="course" />
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<section class="section pt-0" aria-labelledby="how-title">
+    <div class="container">
+        <h2 id="how-title" class="mb-4">How learning works on LearnHub</h2>
+        <ol class="journey-steps">
+            <li>
+                <h3>Find a course</h3>
+                <p>Search the catalogue or pick a category, then open a course to see every lesson on its route.</p>
+            </li>
+            <li>
+                <h3>Enrol for free</h3>
+                <p>Create a student account and enrol in as many courses as you like. Preview lessons are open to everyone.</p>
+            </li>
+            <li>
+                <h3>Work through each lesson</h3>
+                <p>Read articles, watch videos, open PDF references and mark each lesson complete when you finish it.</p>
+            </li>
+            <li>
+                <h3>Check your understanding</h3>
+                <p>Take the course quiz, review the explanations for each answer and follow your progress on your dashboard.</p>
+            </li>
+        </ol>
+    </div>
+</section>
+
+<section class="section pt-0" aria-labelledby="cta-title">
+    <div class="container">
+        <div class="cta-band">
+            @if (User.IsStudent())
+            {
+                <div>
+                    <h2 id="cta-title">Pick up where you left off</h2>
+                    <p>Your dashboard shows the next lesson in each course you are taking.</p>
+                </div>
+                <a class="btn btn-signal btn-lg" asp-controller="Student" asp-action="Dashboard">Go to my dashboard</a>
+            }
+            else if (User.IsAdmin())
+            {
+                <div>
+                    <h2 id="cta-title">Manage the catalogue</h2>
+                    <p>Create courses, upload learning resources and write quizzes from the admin area.</p>
+                </div>
+                <a class="btn btn-signal btn-lg" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">Open the admin dashboard</a>
+            }
+            else
+            {
+                <div>
+                    <h2 id="cta-title">Ready to start your first course?</h2>
+                    <p>Registration takes a minute and every course is free for students.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-signal btn-lg" asp-controller="Account" asp-action="Register">Create a free account</a>
+                    <a class="btn btn-outline-primary btn-lg" asp-controller="Account" asp-action="Login">Log in</a>
+                </div>
+            }
+        </div>
+    </div>
+</section>

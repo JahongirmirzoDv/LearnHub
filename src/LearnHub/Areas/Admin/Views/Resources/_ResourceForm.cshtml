@@ -1,0 +1,97 @@
+@model ResourceFormViewModel
+<div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+
+<div class="admin-form-layout">
+    <div class="form-panel">
+        <section class="form-section" aria-labelledby="resource-basics-title">
+            <h2 id="resource-basics-title">Resource</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="CourseId" class="form-label"></label>
+                    <select asp-for="CourseId" asp-items="@(new SelectList(Model.CourseOptions, nameof(SelectOption.Id), nameof(SelectOption.Name)))" class="form-select">
+                        <option value="">Choose a course</option>
+                    </select>
+                    <span asp-validation-for="CourseId"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Type" class="form-label"></label>
+                    <select asp-for="Type" class="form-select" data-resource-type>
+                        @foreach (var type in Enum.GetValues<ResourceType>())
+                        {
+                            <option value="@type" selected="@(type == Model.Type)">@DisplayFormat.ResourceTypeName(type)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Type"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Title" class="form-label"></label>
+                    <input asp-for="Title" class="form-control" data-char-counter />
+                    <span asp-validation-for="Title"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Summary" class="form-label"></label>
+                    <textarea asp-for="Summary" class="form-control" rows="2" data-char-counter aria-describedby="summary-help"></textarea>
+                    <div id="summary-help" class="form-text">One or two sentences. For images, describe what the image shows so screen-reader users understand it.</div>
+                    <span asp-validation-for="Summary"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section type-fields" data-types="Article" aria-labelledby="resource-body-title">
+            <h2 id="resource-body-title">Lesson content</h2>
+            <label asp-for="Body" class="form-label"></label>
+            <textarea asp-for="Body" class="form-control font-monospace" rows="16" data-char-counter aria-describedby="body-help"></textarea>
+            <div id="body-help" class="form-text">
+                Formatting: <code>## Heading</code>, <code>### Sub-heading</code>, <code>- bullet</code>, <code>1. numbered</code>,
+                <code>&gt; note</code>, <code>**bold**</code>, <code>`code`</code>, and a line containing <code>```</code> to start and end a code block.
+                HTML is shown as plain text, never run.
+            </div>
+            <span asp-validation-for="Body"></span>
+        </section>
+
+        <section class="form-section type-fields" data-types="Video Link" aria-labelledby="resource-link-title">
+            <h2 id="resource-link-title">Link</h2>
+            <label asp-for="ExternalUrl" class="form-label"></label>
+            <input asp-for="ExternalUrl" type="url" class="form-control" placeholder="https://www.youtube.com/watch?v=…" aria-describedby="link-help" />
+            <div id="link-help" class="form-text">For videos, paste a YouTube or Vimeo link; it is embedded in privacy-enhanced mode. External links must start with https://.</div>
+            <span asp-validation-for="ExternalUrl"></span>
+        </section>
+
+        <section class="form-section type-fields" data-types="Pdf Image" aria-labelledby="resource-file-title">
+            <h2 id="resource-file-title">File</h2>
+            @if (Model.ExistingFileName is not null)
+            {
+                <p>
+                    Current file: <strong>@Model.ExistingFileName</strong>@(Model.ExistingFileSizeBytes is long size ? $" ({DisplayFormat.FileSize(size)})" : string.Empty).
+                    Upload a new file only if you want to replace it.
+                </p>
+            }
+            <label asp-for="UploadFile" class="form-label"></label>
+            <input asp-for="UploadFile" class="form-control" data-accept-by-type data-image-preview="resource-image-preview" aria-describedby="file-help" />
+            <div id="file-help" class="form-text">PDF up to 10 MB, or a JPG, PNG or WebP image up to 2 MB. The file content is checked on the server.</div>
+            <span asp-validation-for="UploadFile"></span>
+            <div id="resource-image-preview" class="thumb-preview mt-2" hidden>
+                <img src="data:," alt="Preview of the selected image" />
+            </div>
+        </section>
+    </div>
+
+    <div class="admin-form-aside">
+        <div class="form-panel">
+            <div class="mb-3">
+                <label asp-for="SortOrder" class="form-label"></label>
+                <input asp-for="SortOrder" class="form-control" min="0" max="999" />
+                <span asp-validation-for="SortOrder"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="EstimatedMinutes" class="form-label"></label>
+                <input asp-for="EstimatedMinutes" class="form-control" min="1" max="600" />
+                <span asp-validation-for="EstimatedMinutes"></span>
+            </div>
+            <div class="form-check form-switch">
+                <input asp-for="IsPreview" class="form-check-input" role="switch" />
+                <label asp-for="IsPreview" class="form-check-label"></label>
+            </div>
+        </div>
+    </div>
+</div>

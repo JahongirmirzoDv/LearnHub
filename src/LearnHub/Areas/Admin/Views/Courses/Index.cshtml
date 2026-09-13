@@ -1,0 +1,111 @@
+@model AdminCourseListViewModel
+@{
+    ViewData["Title"] = "Courses";
+    var query = Model.Query;
+    var pagination = new PaginationViewModel(Model.Results.Page, Model.Results.TotalPages, "Index", query.ToRouteValues());
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1>Courses</h1>
+        <p>@DisplayFormat.Plural(Model.Results.TotalCount, "course") match the current filters.</p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i>New course</a>
+    </div>
+</div>
+
+<form class="filter-bar" method="get" asp-action="Index" role="search" aria-label="Filter courses">
+    <div>
+        <label class="form-label" for="q">Search</label>
+        <input id="q" name="q" type="search" class="form-control" value="@query.Q" placeholder="Title or instructor" maxlength="100" />
+    </div>
+    <div>
+        <label class="form-label" for="categoryId">Category</label>
+        <select id="categoryId" name="categoryId" class="form-select" data-auto-submit>
+            <option value="">All categories</option>
+            @foreach (var category in Model.Categories)
+            {
+                <option value="@category.Id" selected="@(category.Id == query.CategoryId)">@category.Name</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label" for="status">Status</label>
+        <select id="status" name="status" class="form-select" data-auto-submit>
+            <option value="All" selected="@(query.Status == PublishStatusFilter.All)">All</option>
+            <option value="Published" selected="@(query.Status == PublishStatusFilter.Published)">Published</option>
+            <option value="Draft" selected="@(query.Status == PublishStatusFilter.Draft)">Draft</option>
+        </select>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">Apply</button>
+        <a class="btn btn-link" asp-action="Index">Reset</a>
+    </div>
+</form>
+
+@if (Model.Results.TotalCount == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-journal-x"></i></span>
+        <h2>No courses found</h2>
+        <p>Change the filters, or create a new course.</p>
+        <a class="btn btn-primary" asp-action="Create">Create a course</a>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="table table-lh table-hover admin-table table-stack">
+            <caption class="visually-hidden">Courses</caption>
+            <thead>
+                <tr>
+                    <th scope="col" class="cell-thumb"><span class="visually-hidden">Cover</span></th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Level</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="num">Lessons</th>
+                    <th scope="col" class="num">Quizzes</th>
+                    <th scope="col" class="num">Learners</th>
+                    <th scope="col">Updated</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var course in Model.Results.Items)
+                {
+                    <tr>
+                        <td class="cell-thumb"><course-cover path="@course.ThumbnailPath" /></td>
+                        <td class="cell-primary">
+                            <a class="cell-title" asp-action="Details" asp-route-id="@course.Id">@course.Title</a>
+                            <span class="cell-sub">@course.CategoryName</span>
+                        </td>
+                        <td data-label="Level"><span class="@DisplayFormat.DifficultyBadgeClass(course.Difficulty)">@course.Difficulty</span></td>
+                        <td data-label="Status">
+                            @if (course.IsPublished)
+                            {
+                                <span class="badge-state badge-state--live">Published</span>
+                            }
+                            else
+                            {
+                                <span class="badge-state badge-state--draft">Draft</span>
+                            }
+                        </td>
+                        <td class="num" data-label="Lessons">@course.ResourceCount</td>
+                        <td class="num" data-label="Quizzes">@course.QuizCount</td>
+                        <td class="num" data-label="Learners">@course.EnrollmentCount</td>
+                        <td data-label="Updated"><time data-local datetime="@DisplayFormat.IsoDate(course.UpdatedAt)">@DisplayFormat.Date(course.UpdatedAt)</time></td>
+                        <td class="cell-actions">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@course.Id">Edit<span class="visually-hidden"> @course.Title</span></a>
+                            <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@course.Id">Delete<span class="visually-hidden"> @course.Title</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer mt-3">
+        <span>Showing @Model.Results.FirstItemNumber–@Model.Results.LastItemNumber of @Model.Results.TotalCount</span>
+        <partial name="_Pagination" model="pagination" />
+    </div>
+}

@@ -94,4 +94,30 @@ public static class DisplayFormat
 
     public static string Plural(int count, string singular, string? plural = null) =>
         $"{count.ToString(Culture)} {(count == 1 ? singular : plural ?? singular + "s")}";
+
+    /// <summary>Category line colour class (<c>line-0</c> … <c>line-7</c>), derived from the category id.</summary>
+    public static string LineClass(int categoryId) => $"line-{Math.Abs(categoryId % 8)}";
+
+    /// <summary>
+    /// Width class for progress bars (<c>pw-0</c> … <c>pw-100</c> in steps of 5). Inline style attributes would
+    /// be blocked by the Content-Security-Policy; any started progress shows at least one step.
+    /// </summary>
+    public static string ProgressWidthClass(int percent)
+    {
+        var clamped = Math.Clamp(percent, 0, 100);
+        var stepped = (int)(Math.Round(clamped / 5.0, MidpointRounding.AwayFromZero) * 5);
+        return $"pw-{(clamped > 0 && stepped == 0 ? 5 : stepped)}";
+    }
+
+    public static string StudentFirstName(string fullName) =>
+        fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? fullName;
+
+    /// <summary>Icon and link target for a dashboard activity entry.</summary>
+    public static (string Icon, string IconClass, string Controller, string Action) Activity(ViewModels.Shared.ActivityKind kind) => kind switch
+    {
+        ViewModels.Shared.ActivityKind.Enrolled => ("bi-journal-plus", string.Empty, "Courses", "Details"),
+        ViewModels.Shared.ActivityKind.CompletedResource => ("bi-check2-circle", "is-go", "Resources", "Details"),
+        ViewModels.Shared.ActivityKind.PassedQuiz => ("bi-trophy", "is-signal", "Quizzes", "Result"),
+        _ => ("bi-arrow-repeat", string.Empty, "Quizzes", "Result")
+    };
 }

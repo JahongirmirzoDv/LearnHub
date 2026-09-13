@@ -1,0 +1,34 @@
+@model ResourceDeleteViewModel
+@{
+    ViewData["Title"] = $"Delete {Model.Title}";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">@Model.CourseTitle</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Delete resource</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>Delete learning resource</h1>
+        <p>@Model.Title</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-7">
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" class="danger-panel">
+            <h2>Delete this @DisplayFormat.ResourceTypeName(Model.Type).ToLowerInvariant()?</h2>
+            <p>It is removed from “@Model.CourseTitle”. Any uploaded file is deleted from storage. This can't be undone.</p>
+            <ul class="impact-list">
+                <li><span>Students who marked it complete</span><strong>@Model.CompletionCount</strong></li>
+            </ul>
+            <p class="text-muted-lh">Removing a lesson changes students' progress percentages for this course.</p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Delete resource</button>
+                <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

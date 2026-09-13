@@ -1,0 +1,94 @@
+@inject LearnHub.Services.IContactService ContactService
+@{
+    var unreadMessages = await ContactService.CountUnreadAsync();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#1b2438" />
+    <title>@(ViewData["Title"] is string title ? $"{title} | LearnHub Admin" : "LearnHub Admin")</title>
+    <link rel="icon" href="~/images/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="~/lib/overpass/overpass-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+</head>
+<body class="admin-body">
+    <a class="skip-link" href="#admin-content">Skip to main content</a>
+
+    <div class="admin-shell">
+        <aside class="admin-sidebar offcanvas-lg offcanvas-start" id="admin-sidebar" tabindex="-1" aria-label="Admin navigation">
+            <div class="offcanvas-header justify-content-end d-lg-none">
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#admin-sidebar" aria-label="Close navigation"></button>
+            </div>
+
+            <a class="admin-brand" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
+                <partial name="_BrandMark" />
+                <span>LearnHub</span>
+                <small>Admin</small>
+            </a>
+
+            <nav class="admin-nav" aria-label="Admin sections">
+                <a lh-nav="Admin/Dashboard" asp-area="Admin" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-speedometer2" aria-hidden="true"></i>Dashboard</a>
+
+                <p class="admin-nav-group">Catalogue</p>
+                <a lh-nav="Admin/Courses" asp-area="Admin" asp-controller="Courses" asp-action="Index"><i class="bi bi-journal-richtext" aria-hidden="true"></i>Courses</a>
+                <a lh-nav="Admin/Categories" asp-area="Admin" asp-controller="Categories" asp-action="Index"><i class="bi bi-diagram-3" aria-hidden="true"></i>Categories</a>
+                <a lh-nav="Admin/Resources" asp-area="Admin" asp-controller="Resources" asp-action="Index"><i class="bi bi-collection-play" aria-hidden="true"></i>Resources</a>
+
+                <p class="admin-nav-group">Assessment</p>
+                <a lh-nav="Admin/Quizzes,Admin/Questions" asp-area="Admin" asp-controller="Quizzes" asp-action="Index"><i class="bi bi-patch-question" aria-hidden="true"></i>Quizzes</a>
+                <a lh-nav="Admin/QuizAttempts" asp-area="Admin" asp-controller="QuizAttempts" asp-action="Index"><i class="bi bi-clipboard-data" aria-hidden="true"></i>Quiz results</a>
+
+                <p class="admin-nav-group">People</p>
+                <a lh-nav="Admin/Users" asp-area="Admin" asp-controller="Users" asp-action="Index"><i class="bi bi-people" aria-hidden="true"></i>Users</a>
+                <a lh-nav="Admin/Enrollments" asp-area="Admin" asp-controller="Enrollments" asp-action="Index"><i class="bi bi-person-check" aria-hidden="true"></i>Enrolments</a>
+                <a lh-nav="Admin/Messages" asp-area="Admin" asp-controller="Messages" asp-action="Index">
+                    <i class="bi bi-envelope" aria-hidden="true"></i>Messages
+                    @if (unreadMessages > 0)
+                    {
+                        <span class="nav-count">@unreadMessages<span class="visually-hidden"> unread</span></span>
+                    }
+                </a>
+
+                <p class="admin-nav-group">Website</p>
+                <a asp-area="" asp-controller="Home" asp-action="Index"><i class="bi bi-house" aria-hidden="true"></i>Main website</a>
+                <form method="post" asp-area="" asp-controller="Account" asp-action="Logout">
+                    <button type="submit" class="admin-nav-button"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Log out</button>
+                </form>
+            </nav>
+        </aside>
+
+        <div class="admin-main">
+            <header class="admin-topbar">
+                <button class="btn btn-outline-secondary btn-sm d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#admin-sidebar" aria-controls="admin-sidebar">
+                    <i class="bi bi-list" aria-hidden="true"></i><span class="visually-hidden">Open navigation</span>
+                </button>
+                <span class="fw-bold text-truncate">@ViewData["Title"]</span>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <a class="btn btn-outline-secondary btn-sm" asp-area="" asp-controller="Home" asp-action="Index">
+                        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span class="d-none d-sm-inline">View site</span>
+                    </a>
+                    <a class="user-chip text-decoration-none text-reset" asp-area="" asp-controller="Profile" asp-action="Index">
+                        <span class="avatar" aria-hidden="true">@DisplayFormat.Initials(User.GetDisplayName())</span>
+                        <span class="d-none d-md-inline">@User.GetDisplayName()</span>
+                    </a>
+                </div>
+            </header>
+
+            <main class="admin-content" id="admin-content" tabindex="-1">
+                <partial name="_StatusMessage" />
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

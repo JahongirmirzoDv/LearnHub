@@ -1,0 +1,153 @@
+@model CourseListViewModel
+@{
+    ViewData["Title"] = "Courses";
+    ViewData["Description"] = "Search and filter LearnHub courses by category and level.";
+    var query = Model.Query;
+    var selectedCategory = Model.Categories.FirstOrDefault(c => c.Id == query.CategoryId);
+    var totalPublished = Model.Categories.Sum(c => c.CourseCount);
+    var sortValue = query.Sort == CourseSort.Newest ? null : query.Sort.ToString();
+}
+
+<section class="page-header">
+    <div class="container">
+        <nav aria-label="Breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Courses</li>
+            </ol>
+        </nav>
+        <h1>Courses</h1>
+        <p>Search by topic or instructor, then narrow the list by category and level.</p>
+        <form class="hero-search mt-3" role="search" method="get" asp-action="Index">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <label for="q" class="visually-hidden">Search courses</label>
+            <input id="q" name="q" type="search" class="form-control" value="@query.Q" maxlength="100"
+                   placeholder="Search by title, topic or instructor" />
+            @if (query.CategoryId is not null)
+            {
+                <input type="hidden" name="categoryId" value="@query.CategoryId" />
+            }
+            @if (query.Difficulty is not null)
+            {
+                <input type="hidden" name="difficulty" value="@query.Difficulty" />
+            }
+            @if (sortValue is not null)
+            {
+                <input type="hidden" name="sort" value="@sortValue" />
+            }
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container catalogue-layout">
+        <aside class="filter-panel panel" aria-labelledby="filter-title">
+            <h2 id="filter-title" class="panel-title">Filter courses</h2>
+
+            <div class="filter-group">
+                <h3 class="form-label">Category</h3>
+                <ul class="filter-lines">
+                    <li>
+                        <a class="filter-line @(query.CategoryId is null ? "is-selected" : null)"
+                           href="@Url.Action("Index", new { q = query.Q, difficulty = query.Difficulty, sort = sortValue })"
+                           aria-current="@(query.CategoryId is null ? "true" : null)">
+                            All categories <span class="line-count">@totalPublished</span>
+                        </a>
+                    </li>
+                    @foreach (var category in Model.Categories)
+                    {
+                        var isSelected = category.Id == query.CategoryId;
+                        <li>
+                            <a class="filter-line @DisplayFormat.LineClass(category.Id) @(isSelected ? "is-selected" : null)"
+                               href="@Url.Action("Index", new { q = query.Q, categoryId = category.Id, difficulty = query.Difficulty, sort = sortValue })"
+                               aria-current="@(isSelected ? "true" : null)">
+                                @category.Name <span class="line-count">@category.CourseCount</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <form class="filter-group" method="get" asp-action="Index">
+                @if (!string.IsNullOrWhiteSpace(query.Q))
+                {
+                    <input type="hidden" name="q" value="@query.Q" />
+                }
+                @if (query.CategoryId is not null)
+                {
+                    <input type="hidden" name="categoryId" value="@query.CategoryId" />
+                }
+                <label class="form-label" for="difficulty">Level</label>
+                <select id="difficulty" name="difficulty" class="form-select" data-auto-submit>
+                    <option value="">All levels</option>
+                    @foreach (var level in Enum.GetValues<DifficultyLevel>())
+                    {
+                        <option value="@level" selected="@(query.Difficulty == level)">@level</option>
+                    }
+                </select>
+
+                <label class="form-label mt-3" for="sort">Sort by</label>
+                <select id="sort" name="sort" class="form-select" data-auto-submit>
+                    <option value="Newest" selected="@(query.Sort == CourseSort.Newest)">Newest</option>
+                    <option value="Popular" selected="@(query.Sort == CourseSort.Popular)">Most popular</option>
+                    <option value="Title" selected="@(query.Sort == CourseSort.Title)">Title (A–Z)</option>
+                    <option value="Shortest" selected="@(query.Sort == CourseSort.Shortest)">Shortest first</option>
+                </select>
+
+                <button type="submit" class="btn btn-outline-primary w-100 mt-3">Apply</button>
+            </form>
+        </aside>
+
+        <section aria-labelledby="results-title">
+            <h2 id="results-title" class="visually-hidden">Search results</h2>
+            <div class="results-bar">
+                <p role="status">@DisplayFormat.Plural(Model.Results.TotalCount, "course") found</p>
+                @if (query.HasFilters)
+                {
+                    <div class="active-filters">
+                        @if (!string.IsNullOrWhiteSpace(query.Q))
+                        {
+                            <a class="filter-tag" href="@Url.Action("Index", new { categoryId = query.CategoryId, difficulty = query.Difficulty, sort = sortValue })">
+                                “@query.Q” <i class="bi bi-x" aria-hidden="true"></i><span class="visually-hidden">Remove search</span>
+                            </a>
+                        }
+                        @if (selectedCategory is not null)
+                        {
+                            <a class="filter-tag" href="@Url.Action("Index", new { q = query.Q, difficulty = query.Difficulty, sort = sortValue })">
+                                @selectedCategory.Name <i class="bi bi-x" aria-hidden="true"></i><span class="visually-hidden">Remove category filter</span>
+                            </a>
+                        }
+                        @if (query.Difficulty is not null)
+                        {
+                            <a class="filter-tag" href="@Url.Action("Index", new { q = query.Q, categoryId = query.CategoryId, sort = sortValue })">
+                                @query.Difficulty <i class="bi bi-x" aria-hidden="true"></i><span class="visually-hidden">Remove level filter</span>
+                            </a>
+                        }
+                        <a class="btn btn-link btn-sm" asp-action="Index">Clear all</a>
+                    </div>
+                }
+            </div>
+
+            @if (Model.Results.TotalCount == 0)
+            {
+                <div class="empty-state">
+                    <span class="empty-icon" aria-hidden="true"><i class="bi bi-search"></i></span>
+                    <h3>No courses match these filters</h3>
+                    <p>Try a shorter search term or remove a filter. Browsing all courses is a good way to discover related topics.</p>
+                    <a class="btn btn-primary" asp-action="Index">Show all courses</a>
+                </div>
+            }
+            else
+            {
+                <div class="course-grid">
+                    @foreach (var course in Model.Results.Items)
+                    {
+                        <partial name="_CourseCard" model="course" />
+                    }
+                </div>
+                <partial name="_Pagination" model="new PaginationViewModel(Model.Results.Page, Model.Results.TotalPages, nameof(LearnHub.Controllers.CoursesController.Index), query.ToRouteValues())" />
+            }
+        </section>
+    </div>
+</div>

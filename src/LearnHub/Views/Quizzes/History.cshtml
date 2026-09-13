@@ -1,0 +1,63 @@
+@model QuizHistoryViewModel
+@{
+    ViewData["Title"] = "Quiz results";
+}
+
+<section class="page-header">
+    <div class="container">
+        <h1>Quiz results</h1>
+        <p>Every quiz you have submitted, newest first.</p>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        @if (Model.Attempts.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="bi bi-clipboard-check"></i></span>
+                <h2>No quiz results yet</h2>
+                <p>Quizzes appear at the end of each course route. Enrol in a course and take its quiz to see your score here.</p>
+                <a class="btn btn-primary" asp-controller="Student" asp-action="MyCourses">Go to my courses</a>
+            </div>
+        }
+        else
+        {
+            <dl class="journey-strip mb-4 quiz-summary">
+                <div><dt>Attempts</dt><dd>@Model.Attempts.Count</dd></div>
+                <div><dt>Passed attempts</dt><dd>@Model.PassedCount</dd></div>
+                <div><dt>Average score</dt><dd>@Model.AverageScore%</dd></div>
+            </dl>
+
+            <div class="table-wrap">
+                <table class="table table-lh table-hover">
+                    <caption class="visually-hidden">All quiz attempts</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Quiz</th>
+                            <th scope="col">Course</th>
+                            <th scope="col">Submitted</th>
+                            <th scope="col" class="text-end">Score</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var attempt in Model.Attempts)
+                        {
+                            <tr>
+                                <td><strong>@attempt.QuizTitle</strong></td>
+                                <td><a asp-controller="Courses" asp-action="Details" asp-route-id="@attempt.CourseId">@attempt.CourseTitle</a></td>
+                                <td><time data-local="datetime" datetime="@DisplayFormat.IsoDate(attempt.SubmittedAt)">@DisplayFormat.DateAndTime(attempt.SubmittedAt)</time></td>
+                                <td class="text-end">
+                                    <span class="score-pill @(attempt.Passed ? "is-passed" : null)">@attempt.ScorePercent%</span>
+                                    <span class="visually-hidden">@(attempt.Passed ? "passed" : "not passed")</span>
+                                </td>
+                                <td class="text-end"><a asp-action="Result" asp-route-id="@attempt.AttemptId">Review<span class="visually-hidden"> @attempt.QuizTitle attempt</span></a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

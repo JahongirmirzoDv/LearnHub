@@ -1,0 +1,29 @@
+@model CourseCardViewModel
+<article class="course-card @DisplayFormat.LineClass(Model.CategoryId)">
+    <course-cover path="@Model.ThumbnailPath" icon="@Model.CategoryIcon" />
+    <div class="course-card-body">
+        <p class="course-line"><i class="@("bi bi-" + Model.CategoryIcon)" aria-hidden="true"></i>@Model.CategoryName</p>
+        <h3 class="course-card-title">
+            <a class="stretched-link" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.Id">@Model.Title</a>
+        </h3>
+        <p class="course-card-text">@Model.ShortDescription</p>
+        <ul class="meta-list">
+            <li><span class="@DisplayFormat.DifficultyBadgeClass(Model.Difficulty)">@Model.Difficulty</span></li>
+            <li><i class="bi bi-clock" aria-hidden="true"></i>@DisplayFormat.Duration(Model.DurationMinutes)</li>
+            <li><i class="bi bi-signpost-split" aria-hidden="true"></i>@DisplayFormat.Plural(Model.ResourceCount, "lesson")</li>
+        </ul>
+    </div>
+    <div class="course-card-footer">
+        @if (Model.IsEnrolled && Model.Progress is not null)
+        {
+            <div class="flex-grow-1">
+                <partial name="_ProgressRoute" model="Model.Progress" />
+            </div>
+        }
+        else
+        {
+            <span><i class="bi bi-person-video3 me-1" aria-hidden="true"></i>@Model.InstructorName</span>
+            <span>@DisplayFormat.Plural(Model.EnrollmentCount, "learner")</span>
+        }
+    </div>
+</article>

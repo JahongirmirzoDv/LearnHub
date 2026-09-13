@@ -1,0 +1,92 @@
+@model MyCoursesViewModel
+@{
+    ViewData["Title"] = "My courses";
+    var tabs = new[]
+    {
+        (Filter: MyCoursesFilter.All, Label: "All", Count: Model.AllCount),
+        (Filter: MyCoursesFilter.InProgress, Label: "In progress", Count: Model.InProgressCount),
+        (Filter: MyCoursesFilter.Completed, Label: "Completed", Count: Model.CompletedCount)
+    };
+}
+
+<section class="page-header">
+    <div class="container">
+        <h1>My courses</h1>
+        <p>Every course you are enrolled in, with your progress and next lesson.</p>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        <nav aria-label="Filter my courses" class="mb-4">
+            <ul class="nav nav-pills gap-2">
+                @foreach (var tab in tabs)
+                {
+                    var isActive = tab.Filter == Model.Filter;
+                    <li class="nav-item">
+                        <a class="line-chip @(isActive ? "is-selected" : null)" asp-action="MyCourses" asp-route-filter="@(tab.Filter == MyCoursesFilter.All ? null : tab.Filter.ToString())" aria-current="@(isActive ? "page" : null)">
+                            @tab.Label <span class="line-count">@tab.Count</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </nav>
+
+        @if (Model.Courses.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="bi bi-journal-bookmark"></i></span>
+                @if (Model.AllCount == 0)
+                {
+                    <h2>You haven't enrolled in any courses yet</h2>
+                    <p>Browse the catalogue, open a course and select “Enrol for free”.</p>
+                    <a class="btn btn-primary" asp-controller="Courses" asp-action="Index">Browse courses</a>
+                }
+                else
+                {
+                    <h2>No courses in this list</h2>
+                    <p>Choose another filter to see the rest of your courses.</p>
+                    <a class="btn btn-outline-primary" asp-action="MyCourses">Show all my courses</a>
+                }
+            </div>
+        }
+        else
+        {
+            <h2 class="visually-hidden">Courses</h2>
+            <ul class="continue-list">
+                @foreach (var item in Model.Courses)
+                {
+                    <li class="continue-item @DisplayFormat.LineClass(item.Course.CategoryId)">
+                        <course-cover path="@item.Course.ThumbnailPath" icon="@item.Course.CategoryIcon" />
+                        <div>
+                            <p class="course-line mb-1"><i class="@("bi bi-" + item.Course.CategoryIcon)" aria-hidden="true"></i>@item.Course.CategoryName</p>
+                            <h3><a asp-controller="Courses" asp-action="Details" asp-route-id="@item.Course.Id">@item.Course.Title</a></h3>
+                            <partial name="_ProgressRoute" model="item.Progress" />
+                            <p class="small text-muted-lh mt-1 mb-0">
+                                Enrolled <time data-local datetime="@DisplayFormat.IsoDate(item.EnrolledAt)">@DisplayFormat.Date(item.EnrolledAt)</time>
+                                @if (item.LastAccessedAt is DateTime lastAccessed)
+                                {
+                                    <span>, last studied <time data-local datetime="@DisplayFormat.IsoDate(lastAccessed)">@DisplayFormat.Date(lastAccessed)</time></span>
+                                }
+                            </p>
+                        </div>
+                        <div class="continue-action">
+                            @if (item.Progress.IsCompleted)
+                            {
+                                <a class="btn btn-outline-primary w-100" asp-controller="Courses" asp-action="Details" asp-route-id="@item.Course.Id">Review course</a>
+                            }
+                            else if (item.NextResourceId is int nextId)
+                            {
+                                <a class="btn btn-signal w-100" asp-controller="Resources" asp-action="Details" asp-route-id="@nextId">@(item.Progress.IsStarted ? "Resume" : "Start")</a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-signal w-100" asp-controller="Courses" asp-action="Details" asp-route-id="@item.Course.Id">Take the quiz</a>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

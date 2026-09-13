@@ -1,0 +1,91 @@
+@model CourseFormViewModel
+<div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+
+<div class="admin-form-layout">
+    <div class="form-panel">
+        <section class="form-section" aria-labelledby="course-details-title">
+            <h2 id="course-details-title">Course details</h2>
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" data-char-counter />
+                <span asp-validation-for="Title"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ShortDescription" class="form-label"></label>
+                <textarea asp-for="ShortDescription" class="form-control" rows="2" data-char-counter aria-describedby="short-description-help"></textarea>
+                <div id="short-description-help" class="form-text">Shown on course cards and in search results.</div>
+                <span asp-validation-for="ShortDescription"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="8" data-char-counter aria-describedby="description-help"></textarea>
+                <div id="description-help" class="form-text">Plain text. Leave a blank line between paragraphs.</div>
+                <span asp-validation-for="Description"></span>
+            </div>
+            <div>
+                <label asp-for="LearningOutcomes" class="form-label"></label>
+                <textarea asp-for="LearningOutcomes" class="form-control" rows="5" data-char-counter></textarea>
+                <span asp-validation-for="LearningOutcomes"></span>
+            </div>
+        </section>
+
+        <section class="form-section" aria-labelledby="course-organisation-title">
+            <h2 id="course-organisation-title">Organisation</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" asp-items="@(new SelectList(Model.CategoryOptions, nameof(SelectOption.Id), nameof(SelectOption.Name)))" class="form-select">
+                        <option value="">Choose a category</option>
+                    </select>
+                    <span asp-validation-for="CategoryId"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Difficulty" class="form-label"></label>
+                    <select asp-for="Difficulty" asp-items="Html.GetEnumSelectList<DifficultyLevel>()" class="form-select"></select>
+                    <span asp-validation-for="Difficulty"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="InstructorName" class="form-label"></label>
+                    <input asp-for="InstructorName" class="form-control" />
+                    <span asp-validation-for="InstructorName"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="DurationMinutes" class="form-label"></label>
+                    <input asp-for="DurationMinutes" class="form-control" min="10" max="6000" step="5" />
+                    <span asp-validation-for="DurationMinutes"></span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="admin-form-aside d-grid gap-3">
+        <div class="form-panel">
+            <h2 class="h6 fw-bold">Cover image</h2>
+            @if (!string.IsNullOrEmpty(Model.ExistingThumbnailPath))
+            {
+                <div class="thumb-preview mb-2">
+                    <img src="@Model.ExistingThumbnailPath" alt="Current cover image" />
+                </div>
+                <div class="form-check mb-3">
+                    <input asp-for="RemoveThumbnail" class="form-check-input" />
+                    <label asp-for="RemoveThumbnail" class="form-check-label"></label>
+                </div>
+            }
+            <label asp-for="ThumbnailFile" class="form-label">@(string.IsNullOrEmpty(Model.ExistingThumbnailPath) ? "Upload an image" : "Replace the image")</label>
+            <input asp-for="ThumbnailFile" class="form-control" data-image-preview="new-thumbnail-preview" aria-describedby="thumbnail-help" />
+            <div id="thumbnail-help" class="form-text">JPG, PNG or WebP up to 2 MB. A 16:9 image such as 1280 × 720 works best.</div>
+            <span asp-validation-for="ThumbnailFile"></span>
+            <div id="new-thumbnail-preview" class="thumb-preview mt-2" hidden>
+                <img src="data:," alt="Preview of the selected image" />
+            </div>
+        </div>
+
+        <div class="form-panel">
+            <div class="form-check form-switch">
+                <input asp-for="IsPublished" class="form-check-input" role="switch" />
+                <label asp-for="IsPublished" class="form-check-label"></label>
+            </div>
+            <p class="form-text mb-0 mt-2">Drafts are only visible to administrators.</p>
+        </div>
+    </div>
+</div>

@@ -5,6 +5,18 @@ using LearnHub.ViewModels.Shared;
 
 namespace LearnHub.ViewModels.Public;
 
+public sealed record ErrorViewModel(int StatusCode, string Title, string Message, string? RequestId)
+{
+    public static ErrorViewModel For(int statusCode, string? requestId) => statusCode switch
+    {
+        404 => new(404, "This page isn't on the map", "The link may be out of date, or the course or lesson may have been removed.", null),
+        403 => new(403, "You don't have access to this page", "Your account doesn't have permission to open it.", null),
+        429 => new(429, "Too many attempts in a short time", "Wait a minute, then try again.", null),
+        500 => new(500, "Something went wrong on our side", "The problem has been logged. Try again in a moment.", requestId),
+        _ => new(statusCode, "The request couldn't be completed", "Go back and try again.", requestId)
+    };
+}
+
 public sealed class HomeViewModel
 {
     public IReadOnlyList<CourseCardViewModel> PopularCourses { get; init; } = [];

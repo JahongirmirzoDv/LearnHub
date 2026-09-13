@@ -1,0 +1,75 @@
+@model ProfileViewModel
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<section class="page-header">
+    <div class="container d-flex flex-wrap align-items-center gap-3">
+        <span class="avatar avatar-lg" aria-hidden="true">@DisplayFormat.Initials(Model.FullName)</span>
+        <div>
+            <h1 class="mb-1">@Model.FullName</h1>
+            <p>@Model.Email, member since <time data-local datetime="@DisplayFormat.IsoDate(Model.MemberSince)">@DisplayFormat.Date(Model.MemberSince)</time></p>
+        </div>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <section class="form-panel" aria-labelledby="profile-form-title">
+                    <h2 id="profile-form-title" class="h4 mb-3">Personal details</h2>
+                    <form method="post" asp-action="Index" novalidate>
+                        <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="FullName" class="form-label"></label>
+                            <input asp-for="FullName" class="form-control" autocomplete="name" data-char-counter />
+                            <span asp-validation-for="FullName"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="email-display">Email address</label>
+                            <input id="email-display" class="form-control" value="@Model.Email" readonly aria-describedby="email-help" />
+                            <div id="email-help" class="form-text">Your email address is your sign-in name and can't be changed here.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Bio" class="form-label"></label>
+                            <textarea asp-for="Bio" class="form-control" rows="4" data-char-counter placeholder="What are you studying, and what do you want to learn next?"></textarea>
+                            <span asp-validation-for="Bio"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Save profile</button>
+                    </form>
+                </section>
+            </div>
+
+            <div class="col-lg-4">
+                <section class="panel mb-4" aria-labelledby="account-title">
+                    <h2 id="account-title" class="panel-title">Account</h2>
+                    <dl class="mb-3">
+                        <dt class="text-muted-lh small">Role</dt>
+                        <dd class="fw-bold">@string.Join(", ", Model.Roles)</dd>
+                    </dl>
+                    <a class="btn btn-outline-primary w-100" asp-action="ChangePassword"><i class="bi bi-key" aria-hidden="true"></i>Change password</a>
+                </section>
+                @if (User.IsStudent())
+                {
+                    <section class="panel" aria-labelledby="shortcuts-title">
+                        <h2 id="shortcuts-title" class="panel-title">Shortcuts</h2>
+                        <ul class="list-unstyled d-grid gap-2 mb-0">
+                            <li><a asp-controller="Student" asp-action="Dashboard"><i class="bi bi-signpost-2 me-2" aria-hidden="true"></i>Dashboard</a></li>
+                            <li><a asp-controller="Student" asp-action="MyCourses"><i class="bi bi-journal-bookmark me-2" aria-hidden="true"></i>My courses</a></li>
+                            <li><a asp-controller="Quizzes" asp-action="History"><i class="bi bi-clipboard-check me-2" aria-hidden="true"></i>Quiz results</a></li>
+                        </ul>
+                    </section>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

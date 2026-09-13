@@ -1,0 +1,101 @@
+@inject Microsoft.Extensions.Options.IOptions<SiteOptions> Site
+@{
+    ViewData["Title"] = "About";
+    ViewData["Description"] = "Why LearnHub exists, who it is for and how it was built.";
+}
+
+<section class="page-header">
+    <div class="container">
+        <h1>About LearnHub</h1>
+        <p>A web-based learning management system built as a university group project.</p>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        <div class="row g-5">
+            <div class="col-lg-7">
+                <section class="mb-5" aria-labelledby="mission-title">
+                    <h2 id="mission-title" class="h3 mb-3">Our mission</h2>
+                    <div class="prose">
+                        <p>LearnHub helps computing students build practical skills through short, well-structured courses. Every course is a clear route of lessons and a quiz, so learners always know what to study next and how far they have come.</p>
+                        <p>Visitors can browse the catalogue and open free preview lessons. Registered students enrol in courses, work through articles, videos, PDF references and images, take quizzes with explained answers and follow their progress on a personal dashboard. Administrators manage courses, categories, learning resources, quizzes, enrolments and user accounts.</p>
+                    </div>
+                </section>
+
+                <section class="mb-5" aria-labelledby="audience-title">
+                    <h2 id="audience-title" class="h3 mb-3">Who LearnHub is for</h2>
+                    <div class="table-wrap">
+                        <table class="table table-lh role-table">
+                            <caption class="visually-hidden">What each type of user can do</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">User</th>
+                                    <th scope="col">What they can do</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th scope="row">Guest</th>
+                                    <td>Browse and search courses, read course details, open free preview lessons, register and contact the team.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Student</th>
+                                    <td>Enrol in courses, open all lessons, mark lessons complete, take quizzes, review results and manage their profile.</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Administrator</th>
+                                    <td>Create, edit and delete courses, categories, resources and quizzes, manage enrolments and users, and read contact messages.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section aria-labelledby="built-title">
+                    <h2 id="built-title" class="h3 mb-3">How it is built</h2>
+                    <div class="info-grid">
+                        <div class="panel">
+                            <h3><i class="bi bi-diagram-3 me-2" aria-hidden="true"></i>ASP.NET Core MVC</h3>
+                            <p>Controllers handle requests, services hold the business rules and Razor views render the pages.</p>
+                        </div>
+                        <div class="panel">
+                            <h3><i class="bi bi-database me-2" aria-hidden="true"></i>Entity Framework Core</h3>
+                            <p>A relational model with migrations for SQLite in development and Azure SQL in production.</p>
+                        </div>
+                        <div class="panel">
+                            <h3><i class="bi bi-shield-lock me-2" aria-hidden="true"></i>ASP.NET Core Identity</h3>
+                            <p>Hashed passwords, account lockout and role-based authorisation for students and administrators.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="col-lg-5" aria-labelledby="project-title">
+                <div class="panel">
+                    <h2 id="project-title" class="panel-title">Project details</h2>
+                    <dl class="definition-grid mb-4">
+                        <dt>Module</dt>
+                        <dd>CT050-3-2-WAPP Web Applications</dd>
+                        <dt>Institution</dt>
+                        <dd>Asia Pacific University of Technology &amp; Innovation</dd>
+                        <dt>Type</dt>
+                        <dd>Group assignment</dd>
+                        <dt>Version</dt>
+                        <dd>@(typeof(Program).Assembly.GetName().Version?.ToString(3))</dd>
+                    </dl>
+                    <div class="d-grid gap-2">
+                        @if (!string.IsNullOrWhiteSpace(Site.Value.PresentationUrl))
+                        {
+                            <a class="btn btn-outline-primary" href="@Site.Value.PresentationUrl" target="_blank" rel="noopener"><i class="bi bi-easel" aria-hidden="true"></i>Project website</a>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Site.Value.RepositoryUrl))
+                        {
+                            <a class="btn btn-outline-primary" href="@Site.Value.RepositoryUrl" target="_blank" rel="noopener"><i class="bi bi-github" aria-hidden="true"></i>Source code on GitHub</a>
+                        }
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</div>

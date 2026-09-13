@@ -1,0 +1,107 @@
+@model AdminResourceListViewModel
+@{
+    ViewData["Title"] = "Resources";
+    var query = Model.Query;
+    var pagination = new PaginationViewModel(Model.Results.Page, Model.Results.TotalPages, "Index", query.ToRouteValues());
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1>Learning resources</h1>
+        <p>Articles, videos, PDF documents, images and links across all courses.</p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn btn-primary" asp-action="Create" asp-route-courseId="@query.CourseId"><i class="bi bi-plus-lg" aria-hidden="true"></i>New resource</a>
+    </div>
+</div>
+
+<form class="filter-bar" method="get" asp-action="Index" role="search" aria-label="Filter resources">
+    <div>
+        <label class="form-label" for="q">Search</label>
+        <input id="q" name="q" type="search" class="form-control" value="@query.Q" placeholder="Resource title" maxlength="100" />
+    </div>
+    <div>
+        <label class="form-label" for="courseId">Course</label>
+        <select id="courseId" name="courseId" class="form-select" data-auto-submit>
+            <option value="">All courses</option>
+            @foreach (var course in Model.Courses)
+            {
+                <option value="@course.Id" selected="@(course.Id == query.CourseId)">@course.Name</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label" for="type">Type</label>
+        <select id="type" name="type" class="form-select" data-auto-submit>
+            <option value="">All types</option>
+            @foreach (var type in Enum.GetValues<ResourceType>())
+            {
+                <option value="@type" selected="@(type == query.Type)">@DisplayFormat.ResourceTypeName(type)</option>
+            }
+        </select>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">Apply</button>
+        <a class="btn btn-link" asp-action="Index">Reset</a>
+    </div>
+</form>
+
+@if (Model.Results.TotalCount == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-collection-play"></i></span>
+        <h2>No resources found</h2>
+        <p>Change the filters, or add a resource to a course.</p>
+        <a class="btn btn-primary" asp-action="Create" asp-route-courseId="@query.CourseId">Add a resource</a>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="table table-lh table-hover admin-table table-stack">
+            <caption class="visually-hidden">Learning resources</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Resource</th>
+                    <th scope="col">Course</th>
+                    <th scope="col" class="num">Order</th>
+                    <th scope="col">Access</th>
+                    <th scope="col" class="num">Completed by</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var resource in Model.Results.Items)
+                {
+                    <tr>
+                        <td class="cell-primary">
+                            <span class="cell-title">@resource.Title</span>
+                            <span class="cell-sub"><i class="bi @DisplayFormat.ResourceIcon(resource.Type) me-1" aria-hidden="true"></i>@DisplayFormat.ResourceTypeName(resource.Type)</span>
+                        </td>
+                        <td data-label="Course"><a asp-controller="Courses" asp-action="Details" asp-route-id="@resource.CourseId">@resource.CourseTitle</a></td>
+                        <td class="num" data-label="Order">@resource.SortOrder</td>
+                        <td data-label="Access">
+                            @if (resource.IsPreview)
+                            {
+                                <span class="badge-state badge-state--info">Free preview</span>
+                            }
+                            else
+                            {
+                                <span class="badge-state">Enrolled only</span>
+                            }
+                        </td>
+                        <td class="num" data-label="Completed by">@resource.CompletionCount</td>
+                        <td class="cell-actions">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@resource.Id">Edit<span class="visually-hidden"> @resource.Title</span></a>
+                            <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@resource.Id">Delete<span class="visually-hidden"> @resource.Title</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer mt-3">
+        <span>Showing @Model.Results.FirstItemNumber–@Model.Results.LastItemNumber of @Model.Results.TotalCount</span>
+        <partial name="_Pagination" model="pagination" />
+    </div>
+}

@@ -1,0 +1,41 @@
+@model CourseDeleteViewModel
+@{
+    ViewData["Title"] = $"Delete {Model.Title}";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Courses</a></li>
+        <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">@Model.Title</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Delete</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>Delete course</h1>
+        <p>@Model.Title</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-7">
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" class="danger-panel">
+            <h2>Permanently delete this course?</h2>
+            <p>Deleting a course also deletes everything that belongs to it. This can't be undone.</p>
+            <ul class="impact-list">
+                <li><span>Learning resources and uploaded files</span><strong>@Model.ResourceCount</strong></li>
+                <li><span>Quizzes with their questions</span><strong>@Model.QuizCount</strong></li>
+                <li><span>Student enrolments</span><strong>@Model.EnrollmentCount</strong></li>
+                <li><span>Quiz attempts and answers</span><strong>@Model.AttemptCount</strong></li>
+            </ul>
+            @if (Model.IsPublished && Model.EnrollmentCount > 0)
+            {
+                <p class="fw-bold">Students are enrolled in this course. Moving it to drafts hides it without losing their progress.</p>
+            }
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Delete course</button>
+                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

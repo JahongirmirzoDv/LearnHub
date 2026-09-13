@@ -1,0 +1,77 @@
+@model QuizResultViewModel
+@* Shared by the student result page and the admin attempt details page. *@
+<div class="score-panel @(Model.Passed ? "is-passed" : null) mb-5">
+    <div class="score-value" aria-hidden="true">@Model.ScorePercent%</div>
+    <div>
+        <h2 class="h3 mb-2">@(Model.Passed ? "Passed" : "Not passed yet")</h2>
+        <p class="mb-2">
+            @Model.CorrectCount of @Model.QuestionCount correct, which is @Model.ScorePercent%.
+            The pass mark is @Model.PassMarkPercent%.
+        </p>
+        <p class="text-muted-lh small mb-0">
+            Submitted <time data-local="datetime" datetime="@DisplayFormat.IsoDate(Model.SubmittedAt)">@DisplayFormat.DateAndTime(Model.SubmittedAt)</time>
+        </p>
+    </div>
+</div>
+
+<h2 class="h3 mb-3">Answer review</h2>
+@if (Model.Questions.Count == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-clipboard-x"></i></span>
+        <h3>The questions from this attempt have been removed</h3>
+        <p>The score above was recorded when the quiz was submitted.</p>
+    </div>
+}
+else
+{
+    <ol class="list-unstyled">
+        @foreach (var question in Model.Questions)
+        {
+            <li class="review-question @(question.IsCorrect ? "is-correct" : "is-wrong")">
+                <p class="quiz-question-number mb-1">
+                    Question @question.Number:
+                    <strong class="@(question.IsCorrect ? "text-success" : "text-danger")">
+                        @(question.IsCorrect ? "correct" : question.WasAnswered ? "incorrect" : "not answered")
+                    </strong>
+                </p>
+                <h3 class="h5">@question.Text</h3>
+                <ul class="review-options">
+                    @foreach (var option in question.Options)
+                    {
+                        var css = option.IsCorrect ? "is-answer" : option.IsSelected ? "is-wrong-choice" : null;
+                        <li class="@css">
+                            @if (option.IsCorrect)
+                            {
+                                <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                            }
+                            else if (option.IsSelected)
+                            {
+                                <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-circle text-muted-lh" aria-hidden="true"></i>
+                            }
+                            <span>
+                                @option.Text
+                                @if (option.IsSelected)
+                                {
+                                    <span class="visually-hidden">(selected answer)</span>
+                                }
+                                @if (option.IsCorrect)
+                                {
+                                    <span class="visually-hidden">(correct answer)</span>
+                                }
+                            </span>
+                        </li>
+                    }
+                </ul>
+                @if (!string.IsNullOrWhiteSpace(question.Explanation))
+                {
+                    <p class="review-explanation"><strong>Why:</strong> @question.Explanation</p>
+                }
+            </li>
+        }
+    </ol>
+}

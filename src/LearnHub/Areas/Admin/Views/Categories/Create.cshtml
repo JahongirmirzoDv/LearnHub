@@ -1,0 +1,33 @@
+@model CategoryFormViewModel
+@{
+    ViewData["Title"] = "New category";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Categories</a></li>
+        <li class="breadcrumb-item active" aria-current="page">New category</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>New category</h1>
+        <p>Give the category a short, recognisable name.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-8">
+        <form method="post" asp-action="Create" novalidate>
+            <partial name="_CategoryForm" model="Model" />
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Create category</button>
+                <a class="btn btn-outline-primary" asp-action="Index">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

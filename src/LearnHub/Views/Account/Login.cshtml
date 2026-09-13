@@ -1,0 +1,50 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Log in";
+}
+
+<div class="container">
+    <div class="auth-shell">
+        <section class="auth-card form-panel" aria-labelledby="login-title">
+            <h1 id="login-title">Log in to LearnHub</h1>
+            <p class="text-muted-lh">New here? <a asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Create a free student account</a>.</p>
+
+            <form method="post" asp-action="Login" novalidate>
+                <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+                <input type="hidden" asp-for="ReturnUrl" />
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" autocomplete="username" autofocus />
+                    <span asp-validation-for="Email"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                    <span asp-validation-for="Password"></span>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="form-check-label"></label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">Log in</button>
+            </form>
+        </section>
+
+        <aside class="auth-aside" aria-labelledby="login-help">
+            <h2 id="login-help">Good to know</h2>
+            <ul class="fact-list list-unstyled d-grid gap-3">
+                <li><i class="bi bi-shield-lock me-2" aria-hidden="true"></i>After five incorrect passwords the account is locked for 15 minutes to stop guessing attacks.</li>
+                <li><i class="bi bi-person-badge me-2" aria-hidden="true"></i>Students go straight to their dashboard; administrators go to the admin area.</li>
+                <li><i class="bi bi-envelope me-2" aria-hidden="true"></i>Can't get in? <a asp-controller="Home" asp-action="Contact">Contact the LearnHub team</a>.</li>
+            </ul>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

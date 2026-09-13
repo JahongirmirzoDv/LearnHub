@@ -1,0 +1,34 @@
+@model QuizFormViewModel
+@{
+    ViewData["Title"] = $"Edit {Model.Title}";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Quizzes</a></li>
+        <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">@Model.Title</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Edit</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>Edit quiz</h1>
+        <p>Changing the pass mark does not change results that were already submitted.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-8">
+        <form method="post" asp-action="Edit" asp-route-id="@Model.Id" novalidate>
+            <partial name="_QuizForm" model="Model" />
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save changes</button>
+                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

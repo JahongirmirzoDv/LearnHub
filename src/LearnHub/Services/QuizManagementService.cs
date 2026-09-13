@@ -19,6 +19,9 @@ public interface IQuizManagementService
 
     Task<OperationResult> UpdateAsync(int id, QuizFormViewModel model, CancellationToken cancellationToken = default);
 
+    /// <summary>Publishes or unpublishes a quiz. A quiz without questions cannot be published.</summary>
+    Task<OperationResult> SetPublishedAsync(int id, bool isPublished, CancellationToken cancellationToken = default);
+
     Task<QuizDeleteViewModel?> GetForDeleteAsync(int id, CancellationToken cancellationToken = default);
 
     Task<OperationResult<int>> DeleteAsync(int id, CancellationToken cancellationToken = default);
@@ -171,6 +174,25 @@ public sealed class QuizManagementService(
 
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Quiz {QuizId} updated.", id);
+        return OperationResult.Success();
+    }
+
+    public async Task<OperationResult> SetPublishedAsync(int id, bool isPublished, CancellationToken cancellationToken = default)
+    {
+        var quiz = await db.Quizzes.FirstOrDefaultAsync(q => q.Id == id, cancellationToken);
+        if (quiz is null)
+        {
+            return OperationResult.NotFound();
+        }
+
+        if (isPublished && !await db.Questions.AnyAsync(q => q.QuizId == id, cancellationToken))
+        {
+            return OperationResult.Failure("Add at least one question before publishing this quiz.");
+        }
+
+        quiz.IsPublished = isPublished;
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Quiz {QuizId} {State}.", id, isPublished ? "published" : "unpublished");
         return OperationResult.Success();
     }
 
