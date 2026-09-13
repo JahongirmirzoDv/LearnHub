@@ -22,17 +22,24 @@ public static class InterchangeMap
         int LabelY,
         string LabelAnchor);
 
+    // LabelY is the baseline of the category name; the course count sits on a second line below it. Labels go above the
+    // top and middle lines but below the bottom lines, so no label crosses a diagonal or reaches the hub.
     public static readonly IReadOnlyList<Slot> Slots =
     [
-        new("M 36 96 H 170 L 300 220", 36, 96, 170, 96, 36, 76, "start"),
-        new("M 564 96 H 430 L 300 220", 564, 96, 430, 96, 564, 76, "end"),
-        new("M 36 220 H 300", 36, 220, 160, 220, 36, 200, "start"),
-        new("M 564 220 H 300", 564, 220, 440, 220, 564, 200, "end"),
-        new("M 36 344 H 170 L 300 220", 36, 344, 170, 344, 36, 324, "start"),
-        new("M 564 344 H 430 L 300 220", 564, 344, 430, 344, 564, 324, "end"),
-        new("M 300 30 V 220", 300, 30, 300, 112, 318, 36, "start"),
-        new("M 300 410 V 220", 300, 410, 300, 330, 318, 424, "start")
+        new("M 36 96 H 170 L 300 220", 36, 96, 170, 96, 36, 58, "start"),
+        new("M 564 96 H 430 L 300 220", 564, 96, 430, 96, 564, 58, "end"),
+        new("M 36 220 H 300", 36, 220, 160, 220, 36, 182, "start"),
+        new("M 564 220 H 300", 564, 220, 440, 220, 564, 182, "end"),
+        new("M 36 344 H 170 L 300 220", 36, 344, 170, 344, 36, 382, "start"),
+        new("M 564 344 H 430 L 300 220", 564, 344, 430, 344, 564, 382, "end"),
+        new("M 300 30 V 220", 300, 30, 300, 112, 318, 26, "start"),
+        new("M 300 410 V 220", 300, 410, 300, 330, 318, 412, "start")
     ];
+
+    /// <summary>Longer names are shortened on the map (the link's accessible name keeps the full name).</summary>
+    public const int MaxLabelLength = 18;
+
+    private const int CountLineOffset = 18;
 
     /// <param name="categories">Categories to draw; the busiest lines get the most prominent slots.</param>
     /// <param name="urlForCategory">Builds the catalogue URL for a category id.</param>
@@ -80,14 +87,17 @@ public static class InterchangeMap
         link.InnerHtml.AppendHtml(Element("circle", ("class", "map-terminus"), ("cx", Number(slot.TerminusX)), ("cy", Number(slot.TerminusY)), ("r", "13")));
 
         var text = Element("text", ("x", Number(slot.LabelX)), ("y", Number(slot.LabelY)), ("text-anchor", slot.LabelAnchor), ("aria-hidden", "true"));
-        text.InnerHtml.Append(category.Name + " ");
-        var count = Element("tspan", ("class", "map-count"));
+        text.InnerHtml.Append(ShortLabel(category.Name));
+        var count = Element("tspan", ("class", "map-count"), ("x", Number(slot.LabelX)), ("dy", Number(CountLineOffset)));
         count.InnerHtml.Append(DisplayFormat.Plural(category.CourseCount, "course"));
         text.InnerHtml.AppendHtml(count);
         link.InnerHtml.AppendHtml(text);
 
         return link;
     }
+
+    internal static string ShortLabel(string name) =>
+        name.Length <= MaxLabelLength ? name : name[..(MaxLabelLength - 1)].TrimEnd() + "…";
 
     private static TagBuilder Element(string name, params (string Name, string Value)[] attributes)
     {

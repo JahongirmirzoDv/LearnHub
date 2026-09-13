@@ -7,18 +7,23 @@
 }
 
 .admin-shell {
+    --sidebar-width: 16.5rem;
     display: flex;
     min-height: 100vh;
 }
 
 /* ---------- Sidebar ---------- */
 .admin-sidebar {
-    --sidebar-width: 16.5rem;
     background: var(--lh-ink);
     color: #fff;
 }
 
 @media (min-width: 992px) {
+    /* The sticky sidebar is one viewport tall, so the shell paints the dark column down the whole page behind it. */
+    .admin-shell {
+        background: linear-gradient(to right, var(--lh-ink) var(--sidebar-width), transparent var(--sidebar-width));
+    }
+
     .admin-sidebar {
         position: sticky;
         top: 0;
