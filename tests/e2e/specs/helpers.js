@@ -36,15 +36,29 @@ async function expectHealthyPage(page, problems) {
   );
   expect(brokenImages, "broken images").toEqual([]);
 
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  expect(overflow, "page must not scroll horizontally").toBeLessThanOrEqual(1);
+  // On failure, name the elements that reach the page's right edge: the culprit is often invisible
+  // (for example an absolutely positioned element that escapes a scrolling container).
+  const layout = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth;
+    const pageWidth = document.documentElement.scrollWidth;
+    if (pageWidth - viewportWidth <= 1) {
+      return { overflow: 0, culprits: [] };
+    }
+    const culprits = [...document.querySelectorAll("body *")]
+      .filter((element) => Math.abs(element.getBoundingClientRect().right + window.scrollX - pageWidth) <= 2)
+      .slice(0, 5)
+      .map((element) => element.outerHTML.slice(0, 120));
+    return { overflow: pageWidth - viewportWidth, culprits };
+  });
+  expect(layout.overflow, `page must not scroll horizontally; right-edge elements: ${layout.culprits.join(" | ")}`).toBeLessThanOrEqual(1);
 
   expect(problems, "console errors or failed requests").toEqual([]);
 }
 
 async function screenshot(page, testInfo, name) {
   const file = path.join(__dirname, "..", "screenshots", testInfo.project.name, `${name}.png`);
-  await page.screenshot({ path: file, fullPage: true });
+  // "disabled" fast-forwards finite CSS animations (such as the home page map drawing in) to their end state.
+  await page.screenshot({ path: file, fullPage: true, animations: "disabled" });
 }
 
 async function login(page, email, password) {

@@ -78,7 +78,9 @@ test.describe("Guest experience", () => {
     const password = page.getByLabel("Password", { exact: true });
     await password.fill("short");
     await password.blur();
-    await expect(page.getByText("Password must be between 8 and 100 characters.")).toBeVisible();
+    await expect(page.locator('[data-valmsg-for="Password"]')).toContainText("Use at least 8 characters");
+    // The rule is now shown as the error, so the identical hint is hidden rather than repeated.
+    await expect(page.locator("#password-help")).toBeHidden();
 
     await password.fill("Learning2026Secure");
     await expect(page.getByText("Password strength: Strong")).toBeVisible();

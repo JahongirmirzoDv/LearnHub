@@ -164,24 +164,31 @@
                         </ol>
                     }
                 </section>
-
-                <section aria-labelledby="recommended-title">
-                    <h2 id="recommended-title" class="h5 mb-3">Recommended for you</h2>
-                    @if (Model.RecommendedCourses.Count == 0)
-                    {
-                        <p class="text-muted-lh">You are enrolled in every published course.</p>
-                    }
-                    else
-                    {
-                        <div class="d-grid gap-3">
-                            @foreach (var course in Model.RecommendedCourses)
-                            {
-                                <partial name="_CourseCard" model="course" />
-                            }
-                        </div>
-                    }
-                </section>
             </div>
         </div>
+
+        @* Full width, so recommendations use the same card grid as the catalogue instead of a tall single column. *@
+        <section class="mt-5" aria-labelledby="recommended-title">
+            <div class="section-heading">
+                <div>
+                    <h2 id="recommended-title" class="h3">Recommended for you</h2>
+                    <p>Courses you have not joined yet, starting with the subjects you already study.</p>
+                </div>
+                <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Index">Browse all courses</a>
+            </div>
+            @if (Model.RecommendedCourses.Count == 0)
+            {
+                <p class="text-muted-lh">You are enrolled in every published course.</p>
+            }
+            else
+            {
+                <div class="course-grid course-grid-3">
+                    @foreach (var course in Model.RecommendedCourses)
+                    {
+                        <partial name="_CourseCard" model="course" />
+                    }
+                </div>
+            }
+        </section>
     </div>
 </div>

@@ -262,6 +262,8 @@ jobs:
         if: always()
         run: |
           log="$RUNNER_TEMP/learnhub-e2e.log"
+          # Kept next to the report so the artifact has one tidy folder structure.
+          cp "$log" tests/e2e/app.log 2> /dev/null || true
           if grep -Eq "^(fail|crit):" "$log"; then
             echo "::error::The application logged errors during the browser tests."
             grep -EA20 "^(fail|crit):" "$log"
@@ -277,5 +279,5 @@ jobs:
             tests/e2e/screenshots
             tests/e2e/playwright-report
             tests/e2e/test-results
-            ${{ runner.temp }}/learnhub-e2e.log
+            tests/e2e/app.log
           retention-days: 14

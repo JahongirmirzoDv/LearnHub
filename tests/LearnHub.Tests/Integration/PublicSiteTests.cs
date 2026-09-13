@@ -1,4 +1,5 @@
 using System.Net;
+using LearnHub.Data;
 using LearnHub.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -149,10 +150,13 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     }
 
     [Fact]
-    public async Task Tests_run_against_an_isolated_in_memory_database()
+    public async Task Tests_run_against_an_isolated_database()
     {
         var connectionString = await factory.WithDbAsync(db => Task.FromResult(db.Database.GetConnectionString()));
-        Assert.Contains("Mode=Memory", connectionString);
+
+        // Never a developer's database file: in-memory SQLite, or a throw-away database on the CI SQL Server.
+        var expected = factory.Provider == DatabaseProvider.SqlServer ? "LearnHubTests_" : "Mode=Memory";
+        Assert.Contains(expected, connectionString);
     }
 
     private Task<int> CourseIdAsync(string title) =>

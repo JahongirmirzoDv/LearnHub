@@ -384,6 +384,11 @@ code, pre, kbd, samp {
     display: none;
 }
 
+/* When a field is invalid its error message repeats the rule, so the hint steps aside instead of showing it twice. */
+.input-validation-error ~ .field-hint {
+    display: none;
+}
+
 .validation-summary-errors {
     border: 1px solid #e3a7ad;
     border-left: 4px solid var(--lh-stop);
@@ -980,6 +985,19 @@ code, pre, kbd, samp {
     gap: 1.25rem;
 }
 
+/* Short, fixed-size selections (3 or 6 cards) stay in complete rows at every width. */
+@media (min-width: 768px) {
+    .course-grid-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .course-grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 .course-card {
     position: relative;
     display: flex;
@@ -1413,7 +1431,8 @@ code, pre, kbd, samp {
 }
 
 .enrol-panel .fact-list .bi {
-    width: 1.4rem;
+    display: inline-block;
+    width: 1.6rem;
     color: var(--lh-muted);
 }
 
@@ -2139,7 +2158,14 @@ a.route-title:hover {
     padding: 0.7rem 0.85rem;
 }
 
+.table-lh time {
+    white-space: nowrap;
+}
+
+/* position: relative makes the wrapper the containing block of absolutely positioned descendants (such as
+   .visually-hidden header text), so they are clipped with the table instead of widening the whole page. */
 .table-wrap {
+    position: relative;
     background: var(--lh-surface);
     border: 1px solid var(--lh-rail);
     border-radius: var(--lh-radius-md);

@@ -27,6 +27,12 @@
         height: 100vh;
         overflow-y: auto;
     }
+
+    /* Bootstrap sets .offcanvas-lg to "background-color: transparent !important" once it is shown inline,
+       which would leave the white navigation text on a light page; the more specific rule restores the rail. */
+    .admin-sidebar.offcanvas-lg {
+        background-color: var(--lh-ink) !important;
+    }
 }
 
 .admin-sidebar.offcanvas-lg {
@@ -222,10 +228,25 @@
     border-radius: var(--lh-radius-md);
 }
 
+/* Pages have one to three filters, so a wrapping flex row is used: the search field takes the most room,
+   the other fields share the rest and the buttons keep their natural width. */
 @media (min-width: 768px) {
     .filter-bar {
-        grid-template-columns: minmax(12rem, 2fr) repeat(auto-fit, minmax(10rem, 1fr)) auto;
-        align-items: end;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .filter-bar > div {
+        flex: 1 1 10rem;
+    }
+
+    .filter-bar > div:first-child {
+        flex: 2 1 14rem;
+    }
+
+    .filter-bar > div:last-child {
+        flex: 0 0 auto;
     }
 }
 
@@ -256,7 +277,9 @@
     width: 4.5rem;
 }
 
+/* An explicit width: a percentage-sized cover inside an auto-sized cell collapses to nothing on narrow tables. */
 .admin-table .cell-thumb .course-cover {
+    width: 4.5rem;
     border-radius: 4px;
     overflow: hidden;
     border-bottom-width: 3px;
@@ -373,13 +396,24 @@
     }
 }
 
+/* Markup order is label, value, note (read that way by screen readers); the value is shown first. */
 .stat-strip > div {
     display: flex;
-    flex-direction: column-reverse;
-    justify-content: flex-end;
+    flex-direction: column;
     padding: 1rem 1.15rem;
     border-right: 1px solid var(--lh-rail);
     border-bottom: 1px solid var(--lh-rail);
+}
+
+.stat-strip > div > dd:first-of-type {
+    order: -1;
+}
+
+/* Two columns below lg: an odd last figure spans the row instead of leaving an empty cell. */
+@media (max-width: 991.98px) {
+    .stat-strip > div:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
 }
 
 .stat-strip dt {

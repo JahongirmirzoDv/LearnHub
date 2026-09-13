@@ -18,23 +18,28 @@
 <dl class="stat-strip">
     <div>
         <dt>Published courses</dt>
-        <dd>@Model.PublishedCourseCount<span class="stat-note">@DisplayFormat.Plural(Model.DraftCourseCount, "draft")</span></dd>
+        <dd class="stat-value">@Model.PublishedCourseCount</dd>
+        <dd class="stat-note">@DisplayFormat.Plural(Model.DraftCourseCount, "draft")</dd>
     </div>
     <div>
         <dt>Students</dt>
-        <dd>@Model.StudentCount<span class="stat-note">@Model.NewStudentsLast30Days new in 30 days</span></dd>
+        <dd class="stat-value">@Model.StudentCount</dd>
+        <dd class="stat-note">@Model.NewStudentsLast30Days new in 30 days</dd>
     </div>
     <div>
         <dt>Enrolments</dt>
-        <dd>@Model.EnrollmentCount<span class="stat-note">@Model.EnrollmentsLast30Days in 30 days</span></dd>
+        <dd class="stat-value">@Model.EnrollmentCount</dd>
+        <dd class="stat-note">@Model.EnrollmentsLast30Days in 30 days</dd>
     </div>
     <div>
         <dt>Quiz attempts</dt>
-        <dd>@Model.AttemptCount<span class="stat-note">@(Model.PassRatePercent is int rate ? $"{rate}% passed, average {Model.AverageScorePercent}%" : "No attempts yet")</span></dd>
+        <dd class="stat-value">@Model.AttemptCount</dd>
+        <dd class="stat-note">@(Model.PassRatePercent is int rate ? $"{rate}% passed, average {Model.AverageScorePercent}%" : "No attempts yet")</dd>
     </div>
     <div>
         <dt>Unread messages</dt>
-        <dd>@Model.UnreadMessageCount<span class="stat-note"><a asp-controller="Messages" asp-action="Index" asp-route-unreadOnly="true">Open inbox</a></span></dd>
+        <dd class="stat-value">@Model.UnreadMessageCount</dd>
+        <dd class="stat-note"><a asp-controller="Messages" asp-action="Index" asp-route-unreadOnly="true">Open inbox</a></dd>
     </div>
 </dl>
 

@@ -56,6 +56,8 @@ public sealed class LearnHubWebApplicationFactory : WebApplicationFactory<Progra
         _keepAlive.Open();
     }
 
+    public DatabaseProvider Provider => _provider;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
