@@ -1,0 +1,39 @@
+@model UserDeleteViewModel
+@{
+    ViewData["Title"] = $"Delete {Model.FullName}";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Users</a></li>
+        <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">@Model.FullName</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Delete</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>Delete account</h1>
+        <p>@Model.FullName, @Model.Email</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-7">
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" class="danger-panel">
+            <h2>Permanently delete this account?</h2>
+            <p>The user can no longer sign in, and all of their learning records are deleted. This can't be undone. Deactivating the account is usually the safer choice.</p>
+            <ul class="impact-list">
+                <li><span>Enrolments</span><strong>@Model.EnrollmentCount</strong></li>
+                <li><span>Quiz attempts</span><strong>@Model.AttemptCount</strong></li>
+            </ul>
+            @if (Model.IsAdmin)
+            {
+                <p class="fw-bold">This is an administrator account. LearnHub always keeps at least one active administrator.</p>
+            }
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Delete account</button>
+                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

@@ -367,6 +367,10 @@
     .stat-strip {
         grid-template-columns: repeat(5, minmax(0, 1fr));
     }
+
+    .stat-strip.quiz-stats {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 .stat-strip > div {
@@ -431,6 +435,12 @@
     border-radius: 5px;
     background: var(--lh-paper);
     overflow: hidden;
+}
+
+.bar-track-inline {
+    display: inline-block;
+    width: 6rem;
+    vertical-align: middle;
 }
 
 .bar-fill {

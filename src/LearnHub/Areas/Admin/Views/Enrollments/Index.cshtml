@@ -1,0 +1,103 @@
+@model AdminEnrollmentListViewModel
+@{
+    ViewData["Title"] = "Enrolments";
+    var query = Model.Query;
+    var pagination = new PaginationViewModel(Model.Results.Page, Model.Results.TotalPages, "Index", query.ToRouteValues());
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1>Enrolments</h1>
+        <p>Which students are taking which courses, and how far they have progressed.</p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn btn-primary" asp-action="Create" asp-route-courseId="@query.CourseId"><i class="bi bi-person-plus" aria-hidden="true"></i>Enrol a student</a>
+    </div>
+</div>
+
+<form class="filter-bar" method="get" asp-action="Index" role="search" aria-label="Filter enrolments">
+    <div>
+        <label class="form-label" for="q">Student</label>
+        <input id="q" name="q" type="search" class="form-control" value="@query.Q" placeholder="Name or email" maxlength="100" />
+    </div>
+    <div>
+        <label class="form-label" for="courseId">Course</label>
+        <select id="courseId" name="courseId" class="form-select" data-auto-submit>
+            <option value="">All courses</option>
+            @foreach (var course in Model.Courses)
+            {
+                <option value="@course.Id" selected="@(course.Id == query.CourseId)">@course.Name</option>
+            }
+        </select>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">Apply</button>
+        <a class="btn btn-link" asp-action="Index">Reset</a>
+    </div>
+</form>
+
+@if (Model.Results.TotalCount == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-person-check"></i></span>
+        <h2>No enrolments found</h2>
+        <p>Students enrol themselves from a course page, or you can enrol a student here.</p>
+        <a class="btn btn-primary" asp-action="Create" asp-route-courseId="@query.CourseId">Enrol a student</a>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="table table-lh table-hover admin-table table-stack">
+            <caption class="visually-hidden">Enrolments</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Student</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Progress</th>
+                    <th scope="col">Enrolled</th>
+                    <th scope="col">Last studied</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var enrollment in Model.Results.Items)
+                {
+                    <tr>
+                        <td class="cell-primary">
+                            <a class="cell-title" asp-controller="Users" asp-action="Details" asp-route-id="@enrollment.UserId">@enrollment.StudentName</a>
+                            <span class="cell-sub">@enrollment.StudentEmail</span>
+                        </td>
+                        <td data-label="Course"><a asp-controller="Courses" asp-action="Details" asp-route-id="@enrollment.CourseId">@enrollment.CourseTitle</a></td>
+                        <td data-label="Progress">
+                            <span class="d-inline-flex align-items-center gap-2">
+                                <span class="bar-track bar-track-inline" aria-hidden="true">
+                                    <span class="bar-fill @DisplayFormat.ProgressWidthClass(enrollment.ProgressPercent)"></span>
+                                </span>
+                                <span>@enrollment.ProgressPercent%</span>
+                            </span>
+                        </td>
+                        <td data-label="Enrolled"><time data-local datetime="@DisplayFormat.IsoDate(enrollment.EnrolledAt)">@DisplayFormat.Date(enrollment.EnrolledAt)</time></td>
+                        <td data-label="Last studied">
+                            @if (enrollment.LastAccessedAt is DateTime lastAccessed)
+                            {
+                                <time data-local datetime="@DisplayFormat.IsoDate(lastAccessed)">@DisplayFormat.Date(lastAccessed)</time>
+                            }
+                            else
+                            {
+                                <span class="text-muted-lh">Not yet</span>
+                            }
+                        </td>
+                        <td class="cell-actions">
+                            <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@enrollment.Id">Remove<span class="visually-hidden"> @enrollment.StudentName from @enrollment.CourseTitle</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer mt-3">
+        <span>Showing @Model.Results.FirstItemNumber–@Model.Results.LastItemNumber of @Model.Results.TotalCount</span>
+        <partial name="_Pagination" model="pagination" />
+    </div>
+}

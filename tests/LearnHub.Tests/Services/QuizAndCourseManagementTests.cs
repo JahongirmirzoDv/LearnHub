@@ -1,0 +1,194 @@
+using LearnHub.Models;
+using LearnHub.Services;
+using LearnHub.Services.Storage;
+using LearnHub.Tests.Infrastructure;
+using LearnHub.ViewModels.Admin;
+using LearnHub.ViewModels.Learning;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+
+namespace LearnHub.Tests.Services;
+
+public sealed class QuizServiceTests
+{
+    [Fact]
+    public async Task Submitting_answers_stores_a_graded_attempt_with_every_answer()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (user, course, quiz) = await CreateEnrolledStudentAsync(database);
+        var service = CreateQuizService(database);
+        var firstQuestion = quiz.Questions.OrderBy(q => q.SortOrder).First();
+        var correctOption = firstQuestion.Options.Single(o => o.IsCorrect);
+
+        var result = await service.SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int> { [firstQuestion.Id] = correctOption.Id });
+
+        Assert.Equal(ResourceAccess.Allowed, result.Access);
+        var attempt = await database.NewContext().QuizAttempts.Include(a => a.Answers).SingleAsync(a => a.Id == result.AttemptId);
+        Assert.Equal(1, attempt.CorrectCount);
+        Assert.Equal(2, attempt.QuestionCount);
+        Assert.Equal(50, attempt.ScorePercent);
+        Assert.True(attempt.Passed); // pass mark is 50 in the test data
+        Assert.Equal(2, attempt.Answers.Count);
+        Assert.Equal(course.Id, (await service.GetResultAsync(attempt.Id, user.Id, isAdmin: false))!.CourseId);
+    }
+
+    [Fact]
+    public async Task Students_cannot_open_other_students_results_but_admins_can()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (owner, _, quiz) = await CreateEnrolledStudentAsync(database);
+        var other = await database.AddUserAsync("Other Student");
+        var service = CreateQuizService(database);
+        var submitted = await service.SubmitAsync(quiz.Id, owner.Id, new Dictionary<int, int>());
+
+        Assert.Null(await service.GetResultAsync(submitted.AttemptId!.Value, other.Id, isAdmin: false));
+        Assert.NotNull(await service.GetResultAsync(submitted.AttemptId.Value, other.Id, isAdmin: true));
+    }
+
+    [Fact]
+    public async Task Students_who_are_not_enrolled_cannot_take_or_submit_the_quiz()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var category = await database.AddCategoryAsync();
+        var course = await database.AddCourseAsync(category);
+        var outsider = await database.AddUserAsync();
+        var service = CreateQuizService(database);
+        var quizId = course.Quizzes.First().Id;
+
+        Assert.Equal(ResourceAccess.RequiresEnrollment, (await service.GetQuizToTakeAsync(quizId, outsider.Id)).Access);
+        Assert.Equal(ResourceAccess.RequiresEnrollment, (await service.SubmitAsync(quizId, outsider.Id, new Dictionary<int, int>())).Access);
+        Assert.Equal(0, await database.NewContext().QuizAttempts.CountAsync());
+    }
+
+    [Fact]
+    public async Task The_quiz_page_never_contains_the_correct_answers()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (user, _, quiz) = await CreateEnrolledStudentAsync(database);
+
+        var take = await CreateQuizService(database).GetQuizToTakeAsync(quiz.Id, user.Id);
+
+        Assert.Equal(ResourceAccess.Allowed, take.Access);
+        // TakeQuizOption only has Id and Text; this guards against someone adding IsCorrect later.
+        Assert.Equal(["Id", "Text"], typeof(TakeQuizOption).GetProperties().Select(p => p.Name).Order());
+    }
+
+    internal static async Task<(ApplicationUser User, Course Course, Quiz Quiz)> CreateEnrolledStudentAsync(TestDatabase database)
+    {
+        var user = await database.AddUserAsync();
+        var category = await database.AddCategoryAsync();
+        var course = await database.AddCourseAsync(category);
+        database.Context.Enrollments.Add(new Enrollment { UserId = user.Id, CourseId = course.Id });
+        await database.Context.SaveChangesAsync();
+        return (user, course, course.Quizzes.First());
+    }
+
+    internal static QuizService CreateQuizService(TestDatabase database) =>
+        new(database.Context,
+            new EnrollmentService(database.Context, new ProgressService(database.Context), new LookupService(database.Context), TimeProvider.System, NullLogger<EnrollmentService>.Instance),
+            TimeProvider.System,
+            NullLogger<QuizService>.Instance);
+}
+
+public sealed class QuestionManagementServiceTests
+{
+    [Fact]
+    public async Task Option_ids_that_belong_to_another_question_are_not_modified()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (_, _, quiz) = await QuizServiceTests.CreateEnrolledStudentAsync(database);
+        var questions = quiz.Questions.OrderBy(q => q.SortOrder).ToList();
+        var foreignOption = questions[1].Options.First();
+        var service = new QuestionManagementService(database.Context, NullLogger<QuestionManagementService>.Instance);
+
+        var model = new QuestionFormViewModel
+        {
+            Id = questions[0].Id,
+            QuizId = quiz.Id,
+            Text = "Updated question text?",
+            Options =
+            [
+                new() { Id = foreignOption.Id, Text = "Tampered" },
+                new() { Text = "Another answer" }
+            ],
+            CorrectOptionIndex = 0
+        };
+
+        var result = await service.UpdateAsync(questions[0].Id, model);
+
+        Assert.True(result.Succeeded);
+        await using var verify = database.NewContext();
+        Assert.Equal(foreignOption.Text, (await verify.AnswerOptions.SingleAsync(o => o.Id == foreignOption.Id)).Text);
+        Assert.Equal(2, await verify.AnswerOptions.CountAsync(o => o.QuestionId == questions[0].Id));
+        Assert.Equal(1, await verify.AnswerOptions.CountAsync(o => o.QuestionId == questions[0].Id && o.IsCorrect));
+    }
+
+    [Fact]
+    public async Task Removing_an_answer_that_students_selected_keeps_their_attempts()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (user, _, quiz) = await QuizServiceTests.CreateEnrolledStudentAsync(database);
+        var question = quiz.Questions.OrderBy(q => q.SortOrder).First();
+        var wrongOption = question.Options.Single(o => !o.IsCorrect);
+        var rightOption = question.Options.Single(o => o.IsCorrect);
+        await QuizServiceTests.CreateQuizService(database).SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int> { [question.Id] = wrongOption.Id });
+        var service = new QuestionManagementService(database.Context, NullLogger<QuestionManagementService>.Instance);
+
+        var result = await service.UpdateAsync(question.Id, new QuestionFormViewModel
+        {
+            Id = question.Id,
+            QuizId = quiz.Id,
+            Text = question.Text,
+            Options = [new() { Id = rightOption.Id, Text = rightOption.Text }, new() { Text = "A brand new wrong answer" }],
+            CorrectOptionIndex = 0
+        });
+
+        Assert.True(result.Succeeded);
+        await using var verify = database.NewContext();
+        Assert.False(await verify.AnswerOptions.AnyAsync(o => o.Id == wrongOption.Id));
+        var answer = await verify.QuizAnswers.SingleAsync(a => a.QuestionId == question.Id);
+        Assert.Null(answer.SelectedOptionId);
+        Assert.Equal(1, await verify.QuizAttempts.CountAsync());
+    }
+}
+
+public sealed class CourseManagementServiceTests
+{
+    [Fact]
+    public async Task Deleting_a_course_removes_its_content_attempts_and_answers_in_the_right_order()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (user, course, quiz) = await QuizServiceTests.CreateEnrolledStudentAsync(database);
+        await QuizServiceTests.CreateQuizService(database).SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int>());
+        var storageRoot = Path.Combine(Path.GetTempPath(), "learnhub-tests", Guid.NewGuid().ToString("N"));
+        var service = new CourseManagementService(
+            database.Context,
+            new LookupService(database.Context),
+            new FileStorageService(Options.Create(new LearnHub.Infrastructure.StorageOptions { RootPath = storageRoot }), new TestHostEnvironment(), NullLogger<FileStorageService>.Instance),
+            NullLogger<CourseManagementService>.Instance);
+
+        var result = await service.DeleteAsync(course.Id);
+
+        Assert.True(result.Succeeded);
+        await using var verify = database.NewContext();
+        Assert.False(await verify.Courses.AnyAsync());
+        Assert.False(await verify.LearningResources.AnyAsync());
+        Assert.False(await verify.Quizzes.AnyAsync());
+        Assert.False(await verify.Questions.AnyAsync());
+        Assert.False(await verify.QuizAttempts.AnyAsync());
+        Assert.False(await verify.QuizAnswers.AnyAsync());
+        Assert.False(await verify.Enrollments.AnyAsync());
+        Assert.True(await verify.Users.AnyAsync(u => u.Id == user.Id));
+        Directory.Delete(storageRoot, recursive: true);
+    }
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = "Testing";
+        public string ApplicationName { get; set; } = "LearnHub.Tests";
+        public string ContentRootPath { get; set; } = Path.GetTempPath();
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
+    }
+}

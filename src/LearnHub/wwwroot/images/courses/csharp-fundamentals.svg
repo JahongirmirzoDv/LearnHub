@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+  <defs>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.6" fill="#1b2438" fill-opacity="0.08"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="#f9e7ea"/>
+  <rect width="640" height="360" fill="url(#dots)"/>
+  <path d="M -30 272 H 190 L 282 180 H 680" fill="none" stroke="#c9344a" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="100" cy="272" r="15" fill="#ffffff" stroke="#c9344a" stroke-width="9"/>
+  <circle cx="616" cy="180" r="15" fill="#ffffff" stroke="#c9344a" stroke-width="9"/>
+  <rect x="370" y="70" width="220" height="220" rx="30" fill="#ffffff" stroke="#1b2438" stroke-width="10"/>
+  <path d="M 440 122 Q 420 122 420 142 V 164 Q 420 180 404 180 Q 420 180 420 196 V 218 Q 420 238 440 238" fill="none" stroke="#1b2438" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 520 122 Q 540 122 540 142 V 164 Q 540 180 556 180 Q 540 180 540 196 V 218 Q 540 238 520 238" fill="none" stroke="#1b2438" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 470 148 L 462 212 M 496 148 L 488 212 M 452 168 H 506 M 448 192 H 502" fill="none" stroke="#c9344a" stroke-width="9" stroke-linecap="round"/>
+</svg>

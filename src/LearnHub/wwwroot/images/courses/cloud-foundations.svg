@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+  <defs>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.6" fill="#1b2438" fill-opacity="0.08"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="#e5ecf9"/>
+  <rect width="640" height="360" fill="url(#dots)"/>
+  <path d="M -30 300 H 130 L 250 180 H 680" fill="none" stroke="#2865c9" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="58" cy="300" r="15" fill="#ffffff" stroke="#2865c9" stroke-width="9"/>
+  <circle cx="616" cy="180" r="15" fill="#ffffff" stroke="#2865c9" stroke-width="9"/>
+  <rect x="370" y="70" width="220" height="220" rx="30" fill="#ffffff" stroke="#1b2438" stroke-width="10"/>
+  <path d="M 432 228 H 532 Q 562 228 562 198 Q 562 170 535 166 Q 528 128 488 128 Q 457 128 446 156 Q 410 157 410 193 Q 410 228 432 228 Z" fill="#ffffff" stroke="#1b2438" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M 486 210 V 166 M 468 184 L 486 166 L 504 184" fill="none" stroke="#2865c9" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

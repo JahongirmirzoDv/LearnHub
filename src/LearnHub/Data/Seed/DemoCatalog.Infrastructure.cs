@@ -206,7 +206,7 @@ internal static partial class DemoCatalog
                 > Returning 404 instead of 403 also avoids confirming that the record exists.
                 """),
             new("OWASP Top 10 summary", ResourceType.Pdf,
-                "A one-page summary of the OWASP Top 10 (2021) categories with a typical example and defence for each.",
+                "A one-page summary of the OWASP Top 10:2025 categories with a typical example and defence for each.",
                 5, File: "owasp-top-10-summary.pdf"),
             new("OWASP Top 10 project", ResourceType.Link,
                 "The official OWASP Top 10 project page with detailed descriptions of each risk.",

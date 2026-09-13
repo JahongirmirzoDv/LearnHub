@@ -1,0 +1,84 @@
+@model AdminMessageListViewModel
+@{
+    ViewData["Title"] = "Messages";
+    var query = Model.Query;
+    var pagination = new PaginationViewModel(Model.Results.Page, Model.Results.TotalPages, "Index", query.ToRouteValues());
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1>Messages</h1>
+        <p>Messages sent through the public contact page. @DisplayFormat.Plural(Model.UnreadCount, "unread message").</p>
+    </div>
+</div>
+
+<nav aria-label="Filter messages" class="mb-3">
+    <ul class="nav gap-2">
+        <li class="nav-item">
+            <a class="line-chip @(query.UnreadOnly ? null : "is-selected")" asp-action="Index" aria-current="@(query.UnreadOnly ? null : "page")">All messages</a>
+        </li>
+        <li class="nav-item">
+            <a class="line-chip @(query.UnreadOnly ? "is-selected" : null)" asp-action="Index" asp-route-unreadOnly="true" aria-current="@(query.UnreadOnly ? "page" : null)">
+                Unread <span class="line-count">@Model.UnreadCount</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+
+@if (Model.Results.TotalCount == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-envelope-open"></i></span>
+        <h2>@(query.UnreadOnly ? "No unread messages" : "No messages yet")</h2>
+        <p>New messages from the contact page appear here.</p>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="table table-lh table-hover admin-table table-stack">
+            <caption class="visually-hidden">Contact messages</caption>
+            <thead>
+                <tr>
+                    <th scope="col">From</th>
+                    <th scope="col">Subject</th>
+                    <th scope="col">Received</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var message in Model.Results.Items)
+                {
+                    <tr>
+                        <td class="cell-primary">
+                            <span class="cell-title">@message.Name</span>
+                            <span class="cell-sub">@message.Email</span>
+                        </td>
+                        <td data-label="Subject">
+                            @if (!message.IsRead)
+                            {
+                                <span class="badge-state badge-state--warn me-1">Unread</span>
+                                <strong>@message.Subject</strong>
+                            }
+                            else
+                            {
+                                <span>@message.Subject</span>
+                            }
+                        </td>
+                        <td data-label="Received"><time data-local="datetime" datetime="@DisplayFormat.IsoDate(message.CreatedAt)">@DisplayFormat.DateAndTime(message.CreatedAt)</time></td>
+                        <td class="cell-actions">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@message.Id">Open<span class="visually-hidden"> message from @message.Name</span></a>
+                            <form method="post" asp-action="Delete" asp-route-id="@message.Id" data-confirm="Delete this message? This can't be undone.">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete<span class="visually-hidden"> message from @message.Name</span></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer mt-3">
+        <span>Showing @Model.Results.FirstItemNumber–@Model.Results.LastItemNumber of @Model.Results.TotalCount</span>
+        <partial name="_Pagination" model="pagination" />
+    </div>
+}

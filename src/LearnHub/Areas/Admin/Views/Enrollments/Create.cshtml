@@ -1,0 +1,48 @@
+@model EnrollmentCreateViewModel
+@{
+    ViewData["Title"] = "Enrol a student";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Enrolments</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Enrol a student</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>Enrol a student</h1>
+        <p>Use this when a student asks for help enrolling. The student must already have an account.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-7">
+        <form method="post" asp-action="Create" class="form-panel" novalidate>
+            <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+
+            <div class="mb-3">
+                <label asp-for="StudentEmail" class="form-label"></label>
+                <input asp-for="StudentEmail" class="form-control" autocomplete="off" placeholder="student@example.com" />
+                <span asp-validation-for="StudentEmail"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="CourseId" class="form-label"></label>
+                <select asp-for="CourseId" asp-items="@(new SelectList(Model.CourseOptions, nameof(SelectOption.Id), nameof(SelectOption.Name)))" class="form-select">
+                    <option value="">Choose a course</option>
+                </select>
+                <span asp-validation-for="CourseId"></span>
+            </div>
+
+            <div class="form-actions mt-0">
+                <button type="submit" class="btn btn-primary">Enrol student</button>
+                <a class="btn btn-outline-primary" asp-action="Index">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

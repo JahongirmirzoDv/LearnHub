@@ -8,6 +8,7 @@ using LearnHub.ViewModels.Account;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace LearnHub.Infrastructure;
 
@@ -103,18 +104,23 @@ public static class ServiceCollectionExtensions
         // Allow the largest permitted upload plus form overhead; the storage service enforces exact limits.
         services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = UploadRules.MaxDocumentBytes + (1024 * 1024));
 
-        var rateLimiting = configuration.GetSection(RateLimitingOptions.SectionName).Get<RateLimitingOptions>() ?? new RateLimitingOptions();
+        services.Configure<RateLimitingOptions>(configuration.GetSection(RateLimitingOptions.SectionName));
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.AddPolicy(RateLimitPolicies.Forms, context => RateLimitPartition.GetFixedWindowLimiter(
-                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = rateLimiting.PermitLimit,
-                    Window = TimeSpan.FromSeconds(rateLimiting.WindowSeconds),
-                    QueueLimit = 0
-                }));
+            // One fixed window per client IP address for login, registration and contact form posts.
+            options.AddPolicy(RateLimitPolicies.Forms, context =>
+            {
+                var limits = context.RequestServices.GetRequiredService<IOptions<RateLimitingOptions>>().Value;
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = limits.PermitLimit,
+                        Window = TimeSpan.FromSeconds(limits.WindowSeconds),
+                        QueueLimit = 0
+                    });
+            });
         });
 
         services.AddResponseCompression(options =>

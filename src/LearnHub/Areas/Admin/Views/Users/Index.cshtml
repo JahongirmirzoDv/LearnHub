@@ -1,0 +1,101 @@
+@model AdminUserListViewModel
+@{
+    ViewData["Title"] = "Users";
+    var query = Model.Query;
+    var pagination = new PaginationViewModel(Model.Results.Page, Model.Results.TotalPages, "Index", query.ToRouteValues());
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1>Users</h1>
+        <p>Student and administrator accounts. Students create their own accounts on the registration page.</p>
+    </div>
+</div>
+
+<form class="filter-bar" method="get" asp-action="Index" role="search" aria-label="Filter users">
+    <div>
+        <label class="form-label" for="q">Search</label>
+        <input id="q" name="q" type="search" class="form-control" value="@query.Q" placeholder="Name or email" maxlength="100" />
+    </div>
+    <div>
+        <label class="form-label" for="role">Role</label>
+        <select id="role" name="role" class="form-select" data-auto-submit>
+            <option value="">All roles</option>
+            @foreach (var role in AppRoles.All)
+            {
+                <option value="@role" selected="@(role == query.Role)">@role</option>
+            }
+        </select>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">Apply</button>
+        <a class="btn btn-link" asp-action="Index">Reset</a>
+    </div>
+</form>
+
+@if (Model.Results.TotalCount == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-people"></i></span>
+        <h2>No users match these filters</h2>
+        <p>Try another name, email address or role.</p>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="table table-lh table-hover admin-table table-stack">
+            <caption class="visually-hidden">User accounts</caption>
+            <thead>
+                <tr>
+                    <th scope="col">User</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="num">Enrolments</th>
+                    <th scope="col">Joined</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model.Results.Items)
+                {
+                    <tr>
+                        <td class="cell-primary">
+                            <span class="d-flex align-items-center gap-2">
+                                <span class="avatar" aria-hidden="true">@DisplayFormat.Initials(user.FullName)</span>
+                                <span>
+                                    <a class="cell-title" asp-action="Details" asp-route-id="@user.Id">@user.FullName</a>
+                                    <span class="cell-sub">@user.Email</span>
+                                </span>
+                            </span>
+                        </td>
+                        <td data-label="Role">@(user.Roles.Count == 0 ? "None" : string.Join(", ", user.Roles))</td>
+                        <td data-label="Status">
+                            @if (user.IsDeactivated)
+                            {
+                                <span class="badge-state badge-state--stop">Deactivated</span>
+                            }
+                            else if (user.IsLockedOut)
+                            {
+                                <span class="badge-state badge-state--warn">Locked</span>
+                            }
+                            else
+                            {
+                                <span class="badge-state badge-state--live">Active</span>
+                            }
+                        </td>
+                        <td class="num" data-label="Enrolments">@user.EnrollmentCount</td>
+                        <td data-label="Joined"><time data-local datetime="@DisplayFormat.IsoDate(user.CreatedAt)">@DisplayFormat.Date(user.CreatedAt)</time></td>
+                        <td class="cell-actions">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@user.Id">Manage<span class="visually-hidden"> @user.FullName</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer mt-3">
+        <span>Showing @Model.Results.FirstItemNumber–@Model.Results.LastItemNumber of @Model.Results.TotalCount</span>
+        <partial name="_Pagination" model="pagination" />
+    </div>
+}

@@ -1,0 +1,159 @@
+@model AdminUserDetailsViewModel
+@{
+    ViewData["Title"] = Model.FullName;
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Users</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.FullName</li>
+    </ol>
+</nav>
+
+<div class="admin-page-header">
+    <div class="d-flex align-items-center gap-3">
+        <span class="avatar avatar-lg" aria-hidden="true">@DisplayFormat.Initials(Model.FullName)</span>
+        <div>
+            <h1>@Model.FullName</h1>
+            <p>@Model.Email</p>
+        </div>
+    </div>
+</div>
+
+@if (Model.IsCurrentUser)
+{
+    <div class="status-message status-info" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <p>This is your own account. To keep at least one administrator in control, you can't change its role, deactivate it or delete it here.</p>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-xl-4">
+        <section class="panel mb-4" aria-labelledby="account-title">
+            <h2 id="account-title" class="panel-title">Account</h2>
+            <dl class="definition-grid">
+                <dt>Role</dt>
+                <dd>@(Model.Roles.Count == 0 ? "None" : string.Join(", ", Model.Roles))</dd>
+                <dt>Status</dt>
+                <dd>
+                    @if (Model.IsDeactivated)
+                    {
+                        <span class="badge-state badge-state--stop">Deactivated</span>
+                    }
+                    else if (Model.IsTemporarilyLocked)
+                    {
+                        <span class="badge-state badge-state--warn">Locked after failed logins</span>
+                    }
+                    else
+                    {
+                        <span class="badge-state badge-state--live">Active</span>
+                    }
+                </dd>
+                <dt>Joined</dt>
+                <dd><time data-local datetime="@DisplayFormat.IsoDate(Model.CreatedAt)">@DisplayFormat.Date(Model.CreatedAt)</time></dd>
+                <dt>Lessons done</dt>
+                <dd>@Model.CompletedResourceCount</dd>
+            </dl>
+            @if (!string.IsNullOrWhiteSpace(Model.Bio))
+            {
+                <p class="text-muted-lh mt-3 mb-0">@Model.Bio</p>
+            }
+        </section>
+
+        <section class="panel" aria-labelledby="manage-title">
+            <h2 id="manage-title" class="panel-title">Manage access</h2>
+
+            <form method="post" asp-action="SetRole" asp-route-id="@Model.Id" class="mb-4">
+                <label class="form-label" for="role">Role</label>
+                <div class="d-flex gap-2">
+                    <select id="role" name="role" class="form-select" disabled="@Model.IsCurrentUser">
+                        @foreach (var role in AppRoles.All)
+                        {
+                            <option value="@role" selected="@Model.Roles.Contains(role)">@role</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary" disabled="@Model.IsCurrentUser">Save</button>
+                </div>
+                <p class="form-text mb-0">Role changes take effect within five minutes, even if the user is signed in.</p>
+            </form>
+
+            @if (Model.IsDeactivated || Model.IsTemporarilyLocked)
+            {
+                <form method="post" asp-action="Reactivate" asp-route-id="@Model.Id" class="mb-2">
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-unlock" aria-hidden="true"></i>Reactivate account</button>
+                </form>
+            }
+            else
+            {
+                <form method="post" asp-action="Deactivate" asp-route-id="@Model.Id" class="mb-2"
+                      data-confirm="Deactivate this account? The user will be signed out and unable to log in until you reactivate it.">
+                    <button type="submit" class="btn btn-outline-danger w-100" disabled="@Model.IsCurrentUser"><i class="bi bi-slash-circle" aria-hidden="true"></i>Deactivate account</button>
+                </form>
+            }
+
+            @if (!Model.IsCurrentUser)
+            {
+                <a class="btn btn-link text-danger w-100" asp-action="Delete" asp-route-id="@Model.Id">Delete account permanently</a>
+            }
+        </section>
+    </div>
+
+    <div class="col-xl-8">
+        <section class="mb-4" aria-labelledby="enrolments-title">
+            <h2 id="enrolments-title" class="h5 mb-2">Enrolments</h2>
+            @if (Model.Enrollments.Count == 0)
+            {
+                <p class="text-muted-lh">Not enrolled in any course.</p>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table table-lh admin-table table-stack">
+                        <caption class="visually-hidden">Courses this user is enrolled in</caption>
+                        <thead><tr><th scope="col">Course</th><th scope="col">Enrolled</th><th scope="col" class="num">Progress</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                        <tbody>
+                            @foreach (var enrollment in Model.Enrollments)
+                            {
+                                <tr>
+                                    <td class="cell-primary"><a class="cell-title" asp-controller="Courses" asp-action="Details" asp-route-id="@enrollment.CourseId">@enrollment.CourseTitle</a></td>
+                                    <td data-label="Enrolled"><time data-local datetime="@DisplayFormat.IsoDate(enrollment.EnrolledAt)">@DisplayFormat.Date(enrollment.EnrolledAt)</time></td>
+                                    <td class="num" data-label="Progress">@enrollment.ProgressPercent%</td>
+                                    <td class="cell-actions"><a class="btn btn-sm btn-outline-danger" asp-controller="Enrollments" asp-action="Delete" asp-route-id="@enrollment.EnrollmentId">Remove<span class="visually-hidden"> from @enrollment.CourseTitle</span></a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section aria-labelledby="attempts-title">
+            <h2 id="attempts-title" class="h5 mb-2">Recent quiz attempts</h2>
+            @if (Model.RecentAttempts.Count == 0)
+            {
+                <p class="text-muted-lh">No quiz attempts yet.</p>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table table-lh admin-table table-stack">
+                        <caption class="visually-hidden">This user's ten most recent quiz attempts</caption>
+                        <thead><tr><th scope="col">Quiz</th><th scope="col">Submitted</th><th scope="col" class="num">Score</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                        <tbody>
+                            @foreach (var attempt in Model.RecentAttempts)
+                            {
+                                <tr>
+                                    <td class="cell-primary"><span class="cell-title">@attempt.QuizTitle</span><span class="cell-sub">@attempt.CourseTitle</span></td>
+                                    <td data-label="Submitted"><time data-local datetime="@DisplayFormat.IsoDate(attempt.SubmittedAt)">@DisplayFormat.Date(attempt.SubmittedAt)</time></td>
+                                    <td class="num" data-label="Score"><span class="score-pill @(attempt.Passed ? "is-passed" : null)">@attempt.ScorePercent%</span></td>
+                                    <td class="cell-actions"><a class="btn btn-sm btn-outline-primary" asp-controller="QuizAttempts" asp-action="Details" asp-route-id="@attempt.AttemptId">Review</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+</div>

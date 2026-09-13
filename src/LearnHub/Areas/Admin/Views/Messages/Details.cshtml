@@ -1,0 +1,44 @@
+@model ContactMessageDetails
+@{
+    ViewData["Title"] = Model.Subject;
+    var replyLink = $"mailto:{Model.Email}?subject={Uri.EscapeDataString("Re: " + Model.Subject)}";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Messages</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Message</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>@Model.Subject</h1>
+        <p>From @Model.Name</p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn btn-primary" href="@replyLink"><i class="bi bi-reply" aria-hidden="true"></i>Reply by email</a>
+        <form method="post" asp-action="MarkUnread" asp-route-id="@Model.Id">
+            <button type="submit" class="btn btn-outline-primary">Mark as unread</button>
+        </form>
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" data-confirm="Delete this message? This can't be undone.">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash" aria-hidden="true"></i>Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-8">
+        <article class="panel">
+            <dl class="definition-grid mb-4">
+                <dt>From</dt>
+                <dd>@Model.Name</dd>
+                <dt>Email</dt>
+                <dd><a href="@replyLink">@Model.Email</a></dd>
+                <dt>Received</dt>
+                <dd><time data-local="datetime" datetime="@DisplayFormat.IsoDate(Model.CreatedAt)">@DisplayFormat.DateAndTime(Model.CreatedAt)</time></dd>
+            </dl>
+            @* The message is displayed as encoded plain text; line breaks are kept with CSS, never converted to HTML. *@
+            <div class="message-body">@Model.Message</div>
+        </article>
+    </div>
+</div>
