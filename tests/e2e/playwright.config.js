@@ -14,6 +14,8 @@ module.exports = defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:5080",
+    // CI serves HTTPS with the untrusted ASP.NET Core development certificate.
+    ignoreHTTPSErrors: true,
     trace: "retain-on-failure",
     screenshot: "only-on-failure"
   },

@@ -25,7 +25,7 @@ env:
 
 jobs:
   build-and-test:
-    name: Build and test
+    name: Build and test (SQLite)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -62,17 +62,7 @@ jobs:
 
       - name: Summarise test results
         if: always()
-        run: |
-          file=$(find TestResults -name 'test-results.trx' | head -n 1)
-          if [ -z "$file" ]; then echo "No test results found." >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
-          counters=$(grep -o '<Counters [^>]*>' "$file")
-          get() { echo "$counters" | grep -o "$1=\"[0-9]*\"" | grep -o '[0-9]*'; }
-          {
-            echo "### Test results"
-            echo "| Total | Passed | Failed |"
-            echo "|------:|-------:|-------:|"
-            echo "| $(get total) | $(get passed) | $(get failed) |"
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: bash scripts/ci/test-summary.sh TestResults test-results.trx "Test results (SQLite)"
 
       - name: Upload test results
         if: always()
@@ -80,4 +70,212 @@ jobs:
         with:
           name: test-results
           path: TestResults
+          retention-days: 14
+
+  sqlserver:
+    name: SQL Server migrations, tests and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # The password is generated per run and masked, so no credential is stored in the repository.
+      - name: Start SQL Server 2022
+        run: |
+          password="Ci$(openssl rand -hex 16)!a1"
+          echo "::add-mask::$password"
+          echo "SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+          docker run -d --name mssql -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=$password" -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+          for attempt in $(seq 1 60); do
+            if docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$password" -Q "SELECT 1" > /dev/null 2>&1; then
+              echo "SQL Server is ready."
+              exit 0
+            fi
+            sleep 3
+          done
+          docker logs mssql
+          exit 1
+
+      - name: Restore tools and build
+        run: |
+          dotnet tool restore
+          dotnet build LearnHub.sln --configuration Release
+
+      - name: Apply all migrations to an empty database with dotnet ef
+        run: |
+          export ConnectionStrings__SqlServer="Server=localhost,1433;Database=LearnHubMigrations;User Id=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+          dotnet ef database update --project src/LearnHub --context SqlServerDbContext --configuration Release --no-build
+
+      - name: Generate the idempotent migration script
+        run: >
+          dotnet ef migrations script --idempotent
+          --project src/LearnHub --context SqlServerDbContext --configuration Release --no-build
+          --output artifacts/learnhub-sqlserver-migrations.sql
+
+      - name: Run the test suite against SQL Server
+        run: |
+          export LEARNHUB_TEST_SQLSERVER="Server=localhost,1433;User Id=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+          dotnet test --solution LearnHub.sln --configuration Release --no-build \
+            --results-directory "$GITHUB_WORKSPACE/TestResults" \
+            --report-xunit-trx --report-xunit-trx-filename sqlserver-test-results.trx
+
+      - name: Summarise test results
+        if: always()
+        run: bash scripts/ci/test-summary.sh TestResults sqlserver-test-results.trx "Test results (SQL Server)"
+
+      - name: Publish LearnHub
+        run: dotnet publish src/LearnHub/LearnHub.csproj --configuration Release --output "$RUNNER_TEMP/learnhub"
+
+      - name: Smoke test the published app on SQL Server
+        run: |
+          log="$RUNNER_TEMP/learnhub-sqlserver.log"
+          (
+            cd "$RUNNER_TEMP/learnhub"
+            export ASPNETCORE_ENVIRONMENT=Production
+            export ASPNETCORE_URLS=http://127.0.0.1:5080
+            export Database__Provider=SqlServer
+            export ConnectionStrings__SqlServer="Server=localhost,1433;Database=LearnHubSmoke;User Id=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+            export Storage__RootPath="$RUNNER_TEMP/storage"
+            admin_password="Adm$(openssl rand -hex 12)A1"
+            echo "::add-mask::$admin_password"
+            export Seed__AdminPassword="$admin_password"
+            nohup dotnet LearnHub.dll > "$log" 2>&1 &
+          )
+          status=0
+          bash scripts/smoke-test.sh http://127.0.0.1:5080 || status=1
+          grep -q "Demo data seeded" "$log" || { echo "::error::Demo data was not seeded on SQL Server."; status=1; }
+          grep -q "Administrator account" "$log" || { echo "::error::The administrator account was not created."; status=1; }
+          if grep -Eq "^(fail|crit):" "$log"; then echo "::error::The application logged errors."; status=1; fi
+          if [ "$status" != "0" ]; then cat "$log"; fi
+          exit "$status"
+
+      - name: Upload SQL Server artefacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sqlserver
+          path: |
+            artifacts/learnhub-sqlserver-migrations.sql
+            TestResults
+            ${{ runner.temp }}/learnhub-sqlserver.log
+          retention-days: 14
+
+  e2e:
+    name: Browser tests (mobile, tablet, desktop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      E2E_BASE_URL: https://127.0.0.1:5443
+      E2E_ADMIN_EMAIL: admin@learnhub.test
+      E2E_STUDENT_EMAIL: demo.student@learnhub.test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Generate throw-away test credentials
+        run: |
+          admin="Adm$(openssl rand -hex 12)A1"
+          student="Stu$(openssl rand -hex 12)S1"
+          echo "::add-mask::$admin"
+          echo "::add-mask::$student"
+          echo "E2E_ADMIN_PASSWORD=$admin" >> "$GITHUB_ENV"
+          echo "E2E_STUDENT_PASSWORD=$student" >> "$GITHUB_ENV"
+
+      - name: Publish LearnHub
+        run: dotnet publish src/LearnHub/LearnHub.csproj --configuration Release --output "$RUNNER_TEMP/learnhub"
+
+      # Production mode marks cookies Secure-only, so the app is served over HTTPS with a one-day self-signed certificate.
+      - name: Start LearnHub over HTTPS with production settings
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=127.0.0.1" \
+            -addext "subjectAltName=IP:127.0.0.1" \
+            -keyout "$RUNNER_TEMP/e2e-key.pem" -out "$RUNNER_TEMP/e2e-cert.pem" 2> /dev/null
+          log="$RUNNER_TEMP/learnhub-e2e.log"
+          (
+            cd "$RUNNER_TEMP/learnhub"
+            export ASPNETCORE_ENVIRONMENT=Production
+            export ASPNETCORE_URLS="$E2E_BASE_URL"
+            export Kestrel__Certificates__Default__Path="$RUNNER_TEMP/e2e-cert.pem"
+            export Kestrel__Certificates__Default__KeyPath="$RUNNER_TEMP/e2e-key.pem"
+            export ConnectionStrings__Sqlite="Data Source=$RUNNER_TEMP/learnhub-e2e.db"
+            export Storage__RootPath="$RUNNER_TEMP/storage"
+            export Seed__AdminEmail="$E2E_ADMIN_EMAIL"
+            export Seed__AdminPassword="$E2E_ADMIN_PASSWORD"
+            export Seed__DemoStudentEmail="$E2E_STUDENT_EMAIL"
+            export Seed__DemoStudentPassword="$E2E_STUDENT_PASSWORD"
+            export RateLimiting__PermitLimit=1000
+            nohup dotnet LearnHub.dll > "$log" 2>&1 &
+          )
+          for attempt in $(seq 1 90); do
+            if curl -ksf "$E2E_BASE_URL/health" > /dev/null 2>&1; then
+              echo "LearnHub is running."
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$log"
+          exit 1
+
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run browser tests
+        working-directory: tests/e2e
+        run: npx playwright test
+
+      - name: Check the application log for errors
+        if: always()
+        run: |
+          log="$RUNNER_TEMP/learnhub-e2e.log"
+          if grep -Eq "^(fail|crit):" "$log"; then
+            echo "::error::The application logged errors during the browser tests."
+            grep -EA20 "^(fail|crit):" "$log"
+            exit 1
+          fi
+
+      - name: Upload screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-screenshots
+          path: |
+            tests/e2e/screenshots
+            tests/e2e/playwright-report
+            tests/e2e/test-results
+            ${{ runner.temp }}/learnhub-e2e.log
           retention-days: 14

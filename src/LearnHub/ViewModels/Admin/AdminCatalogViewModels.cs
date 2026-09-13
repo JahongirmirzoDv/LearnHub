@@ -224,9 +224,9 @@ public sealed class AdminCourseDetailsViewModel
 
     public int AttemptCount { get; init; }
 
-    public IReadOnlyList<AdminResourceListItem> Resources { get; init; } = [];
+    public IReadOnlyList<AdminResourceListItem> Resources { get; set; } = [];
 
-    public IReadOnlyList<AdminQuizListItem> Quizzes { get; init; } = [];
+    public IReadOnlyList<AdminQuizListItem> Quizzes { get; set; } = [];
 
     public IReadOnlyList<RecentEnrollmentItem> RecentEnrollments { get; set; } = [];
 }

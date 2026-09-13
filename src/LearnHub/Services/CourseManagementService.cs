@@ -93,29 +93,35 @@ public sealed class CourseManagementService(
                 CreatedAt = c.CreatedAt,
                 UpdatedAt = c.UpdatedAt,
                 EnrollmentCount = c.Enrollments.Count,
-                AttemptCount = c.Quizzes.SelectMany(q => q.Attempts).Count(),
-                Resources = c.Resources
-                    .OrderBy(r => r.SortOrder).ThenBy(r => r.Id)
-                    .Select(r => new AdminResourceListItem(r.Id, r.Title, r.Type, c.Id, c.Title, r.SortOrder, r.IsPreview, r.Completions.Count, r.UpdatedAt))
-                    .ToList(),
-                Quizzes = c.Quizzes
-                    .OrderBy(q => q.Id)
-                    .Select(q => new AdminQuizListItem(q.Id, q.Title, c.Id, c.Title, q.Questions.Count, q.Attempts.Count, q.PassMarkPercent, q.IsPublished, q.UpdatedAt))
-                    .ToList()
+                AttemptCount = c.Quizzes.SelectMany(q => q.Attempts).Count()
             })
-            .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (course is not null)
+        if (course is null)
         {
-            // A limited (Take) collection inside a projection needs SQL APPLY, which SQLite lacks; query it separately.
-            course.RecentEnrollments = await db.Enrollments.AsNoTracking()
-                .Where(e => e.CourseId == id)
-                .OrderByDescending(e => e.EnrolledAt)
-                .Take(5)
-                .Select(e => new RecentEnrollmentItem(e.User.FullName, e.CourseId, e.Course.Title, e.EnrolledAt))
-                .ToListAsync(cancellationToken);
+            return null;
         }
+
+        // Flat queries instead of nested collection projections: correlated collections (and Take inside them)
+        // need SQL APPLY, which SQLite does not support.
+        course.Resources = await db.LearningResources.AsNoTracking()
+            .Where(r => r.CourseId == id)
+            .OrderBy(r => r.SortOrder).ThenBy(r => r.Id)
+            .Select(r => new AdminResourceListItem(r.Id, r.Title, r.Type, r.CourseId, r.Course.Title, r.SortOrder, r.IsPreview, r.Completions.Count, r.UpdatedAt))
+            .ToListAsync(cancellationToken);
+
+        course.Quizzes = await db.Quizzes.AsNoTracking()
+            .Where(q => q.CourseId == id)
+            .OrderBy(q => q.Id)
+            .Select(q => new AdminQuizListItem(q.Id, q.Title, q.CourseId, q.Course.Title, q.Questions.Count, q.Attempts.Count, q.PassMarkPercent, q.IsPublished, q.UpdatedAt))
+            .ToListAsync(cancellationToken);
+
+        course.RecentEnrollments = await db.Enrollments.AsNoTracking()
+            .Where(e => e.CourseId == id)
+            .OrderByDescending(e => e.EnrolledAt)
+            .Take(5)
+            .Select(e => new RecentEnrollmentItem(e.User.FullName, e.CourseId, e.Course.Title, e.EnrolledAt))
+            .ToListAsync(cancellationToken);
 
         return course;
     }

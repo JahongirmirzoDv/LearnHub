@@ -11,8 +11,11 @@ const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:5080";
 function watchPage(page) {
   const problems = [];
   page.on("console", (message) => {
-    if (message.type() === "error") {
-      problems.push(`console: ${message.text()}`);
+    const source = message.location().url;
+    // Messages logged inside embedded third-party players (YouTube, Vimeo) are outside our control.
+    const thirdParty = source.startsWith("http") && !source.startsWith(baseUrl);
+    if (message.type() === "error" && !thirdParty) {
+      problems.push(`console: ${message.text()} (${source || "page"})`);
     }
   });
   page.on("pageerror", (error) => problems.push(`script error: ${error.message}`));
