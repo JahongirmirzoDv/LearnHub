@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.RegularExpressions;
 using LearnHub.Data;
 using LearnHub.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -147,6 +148,19 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
 
         var cover = await client.GetAsync("/images/courses/networking-fundamentals.svg");
         Assert.Equal(HttpStatusCode.OK, cover.StatusCode);
+    }
+
+    [Fact]
+    public async Task Home_page_map_draws_one_line_per_category()
+    {
+        var html = await factory.CreateBrowserClient().GetHtmlAsync("/");
+
+        var categoryLinks = Regex.Count(html, "class=\"[^\"]*\\bline-chip\\b");
+        var mapLines = Regex.Count(html, "class=\"[^\"]*\\bmap-line\\b");
+
+        Assert.True(categoryLinks > 0, "The home page lists no categories.");
+        Assert.Equal(categoryLinks, mapLines);
+        Assert.Contains("pathLength=\"1\"", html);
     }
 
     [Fact]

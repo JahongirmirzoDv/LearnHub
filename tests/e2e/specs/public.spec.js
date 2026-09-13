@@ -9,6 +9,19 @@ test.describe("Guest experience", () => {
 
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Build real computing skills");
     await expect(page.getByRole("heading", { name: "Popular courses" })).toBeVisible();
+
+    // Wide screens draw every category as a line on the map (phones get the category list instead).
+    const map = page.locator(".interchange-map");
+    if (await map.isVisible()) {
+      const lines = map.locator(".map-line");
+      await expect(lines).toHaveCount(await page.locator(".line-list .line-chip").count());
+      const path = await lines.first().locator("path").evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { stroke: style.stroke, dashOffset: style.strokeDashoffset, markup: element.parentElement?.outerHTML.slice(0, 400) };
+      });
+      expect(path.stroke, JSON.stringify(path)).not.toBe("none");
+    }
+
     await expectHealthyPage(page, problems);
     await screenshot(page, testInfo, "01-home");
   });
