@@ -1,0 +1,27 @@
+@model QuizResultViewModel
+@{
+    ViewData["Title"] = $"{Model.StudentName}: {Model.QuizTitle}";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Quiz results</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Attempt</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>@Model.QuizTitle</h1>
+        <p>Attempt by <strong>@Model.StudentName</strong> in @Model.CourseTitle</p>
+    </div>
+    <div class="admin-actions">
+        <a class="btn btn-outline-primary" asp-controller="Quizzes" asp-action="Details" asp-route-id="@Model.QuizId">Open quiz</a>
+        <a class="btn btn-outline-danger" asp-action="Delete" asp-route-id="@Model.AttemptId"><i class="bi bi-trash" aria-hidden="true"></i>Delete attempt</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-9">
+        <partial name="_QuizReview" model="Model" />
+    </div>
+</div>

@@ -1,0 +1,33 @@
+@model QuestionDeleteViewModel
+@{
+    ViewData["Title"] = "Delete question";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Quizzes" asp-action="Details" asp-route-id="@Model.QuizId">@Model.QuizTitle</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Delete question</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>Delete question</h1>
+        <p>@Model.Text</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-7">
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" class="danger-panel">
+            <h2>Delete this question and its answers?</h2>
+            <p>Past attempts keep their recorded score, but this question disappears from their answer review. This can't be undone.</p>
+            <ul class="impact-list">
+                <li><span>Attempts that answered this question</span><strong>@Model.AnswerCount</strong></li>
+            </ul>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Delete question</button>
+                <a class="btn btn-outline-primary" asp-controller="Quizzes" asp-action="Details" asp-route-id="@Model.QuizId">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

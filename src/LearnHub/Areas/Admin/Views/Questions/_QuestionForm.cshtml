@@ -1,0 +1,50 @@
+@model QuestionFormViewModel
+<div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+<input type="hidden" asp-for="QuizId" />
+
+<div class="form-panel">
+    <div class="mb-3">
+        <label asp-for="Text" class="form-label"></label>
+        <textarea asp-for="Text" class="form-control" rows="3" data-char-counter></textarea>
+        <span asp-validation-for="Text"></span>
+    </div>
+
+    <fieldset class="mb-3">
+        <legend class="form-label">Answers</legend>
+        <p class="form-text mt-0">Fill in between @QuestionFormViewModel.MinOptions and @QuestionFormViewModel.MaxOptions answers and select the correct one. Empty rows are ignored.</p>
+        <span asp-validation-for="Options"></span>
+        <span asp-validation-for="CorrectOptionIndex"></span>
+
+        <div class="option-editor mt-2" data-option-editor>
+            @for (var index = 0; index < Model.Options.Count; index++)
+            {
+                var number = index + 1;
+                var textId = "option-text-" + index;
+                var correctId = "option-correct-" + index;
+                <div class="option-row">
+                    <input type="radio" class="form-check-input" id="@correctId" name="@nameof(QuestionFormViewModel.CorrectOptionIndex)" value="@index"
+                           checked="@(Model.CorrectOptionIndex == index)" aria-label="@($"Answer {number} is correct")" />
+                    <div>
+                        <input type="hidden" name="@($"Options[{index}].Id")" value="@Model.Options[index].Id" />
+                        <label class="visually-hidden" for="@textId">Answer @number</label>
+                        <input type="text" class="form-control" id="@textId" name="@($"Options[{index}].Text")" value="@Model.Options[index].Text"
+                               maxlength="@FieldLengths.AnswerOptionText" placeholder="@($"Answer {number}")" />
+                    </div>
+                </div>
+            }
+        </div>
+    </fieldset>
+
+    <div class="row g-3">
+        <div class="col-md-9">
+            <label asp-for="Explanation" class="form-label"></label>
+            <textarea asp-for="Explanation" class="form-control" rows="2" data-char-counter></textarea>
+            <span asp-validation-for="Explanation"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="SortOrder" class="form-label"></label>
+            <input asp-for="SortOrder" class="form-control" min="0" max="999" />
+            <span asp-validation-for="SortOrder"></span>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,88 @@
+@model AdminAttemptListViewModel
+@{
+    ViewData["Title"] = "Quiz results";
+    var query = Model.Query;
+    var pagination = new PaginationViewModel(Model.Results.Page, Model.Results.TotalPages, "Index", query.ToRouteValues());
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1>Quiz results</h1>
+        <p>Every quiz attempt submitted by students, newest first.</p>
+    </div>
+</div>
+
+<form class="filter-bar" method="get" asp-action="Index" role="search" aria-label="Filter quiz results">
+    <div>
+        <label class="form-label" for="q">Student</label>
+        <input id="q" name="q" type="search" class="form-control" value="@query.Q" placeholder="Name or email" maxlength="100" />
+    </div>
+    <div>
+        <label class="form-label" for="quizId">Quiz</label>
+        <select id="quizId" name="quizId" class="form-select" data-auto-submit>
+            <option value="">All quizzes</option>
+            @foreach (var quiz in Model.Quizzes)
+            {
+                <option value="@quiz.Id" selected="@(quiz.Id == query.QuizId)">@quiz.Name</option>
+            }
+        </select>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">Apply</button>
+        <a class="btn btn-link" asp-action="Index">Reset</a>
+    </div>
+</form>
+
+@if (Model.Results.TotalCount == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true"><i class="bi bi-clipboard-data"></i></span>
+        <h2>No quiz results found</h2>
+        <p>Results appear here as soon as students submit a quiz.</p>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="table table-lh table-hover admin-table table-stack">
+            <caption class="visually-hidden">Quiz attempts</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Student</th>
+                    <th scope="col">Quiz</th>
+                    <th scope="col" class="num">Score</th>
+                    <th scope="col">Submitted</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var attempt in Model.Results.Items)
+                {
+                    <tr>
+                        <td class="cell-primary">
+                            <span class="cell-title">@attempt.StudentName</span>
+                            <span class="cell-sub">@attempt.StudentEmail</span>
+                        </td>
+                        <td data-label="Quiz">
+                            <a asp-controller="Quizzes" asp-action="Details" asp-route-id="@attempt.QuizId">@attempt.QuizTitle</a>
+                            <span class="cell-sub">@attempt.CourseTitle</span>
+                        </td>
+                        <td class="num" data-label="Score">
+                            <span class="score-pill @(attempt.Passed ? "is-passed" : null)">@attempt.ScorePercent%</span>
+                            <span class="visually-hidden">@(attempt.Passed ? "passed" : "not passed")</span>
+                        </td>
+                        <td data-label="Submitted"><time data-local="datetime" datetime="@DisplayFormat.IsoDate(attempt.SubmittedAt)">@DisplayFormat.DateAndTime(attempt.SubmittedAt)</time></td>
+                        <td class="cell-actions">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@attempt.Id">Review<span class="visually-hidden"> attempt by @attempt.StudentName</span></a>
+                            <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@attempt.Id">Delete<span class="visually-hidden"> attempt by @attempt.StudentName</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer mt-3">
+        <span>Showing @Model.Results.FirstItemNumber–@Model.Results.LastItemNumber of @Model.Results.TotalCount</span>
+        <partial name="_Pagination" model="pagination" />
+    </div>
+}

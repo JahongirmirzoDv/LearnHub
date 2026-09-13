@@ -1,0 +1,34 @@
+@model AttemptDeleteViewModel
+@{
+    ViewData["Title"] = "Delete quiz attempt";
+}
+
+<nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Quiz results</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Delete attempt</li>
+    </ol>
+</nav>
+<div class="admin-page-header">
+    <div>
+        <h1>Delete quiz attempt</h1>
+        <p>@Model.StudentName, @Model.QuizTitle</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-7">
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" class="danger-panel">
+            <h2>Delete this attempt?</h2>
+            <p>
+                The attempt scored <strong>@Model.ScorePercent%</strong> and was submitted
+                <time data-local="datetime" datetime="@DisplayFormat.IsoDate(Model.SubmittedAt)">@DisplayFormat.DateAndTime(Model.SubmittedAt)</time>.
+                If it was the student's only passing attempt, their course progress goes down. This can't be undone.
+            </p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Delete attempt</button>
+                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
