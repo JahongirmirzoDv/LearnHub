@@ -1,0 +1,144 @@
+name: Deploy to Azure
+
+# Builds, tests and publishes on every push to main. The deploy job runs only after Azure has been
+# provisioned (infra/provision.sh) and the repository variables below exist, so forks and fresh clones
+# never fail on missing cloud configuration.
+#
+# Repository variables (Settings > Secrets and variables > Actions > Variables); none of them is a secret:
+#   AZURE_WEBAPP_NAME      App Service name
+#   AZURE_WEBAPP_URL       https://<default host name> printed by infra/provision.sh
+#   AZURE_CLIENT_ID        client id of the deployment managed identity
+#   AZURE_TENANT_ID        Microsoft Entra tenant id
+#   AZURE_SUBSCRIPTION_ID  Azure subscription id
+# Azure trusts this workflow through OpenID Connect federation, so no password or publish profile is stored.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "Documentation/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  build:
+    name: Build, test and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: |
+          dotnet restore LearnHub.sln
+          dotnet tool restore
+
+      - name: Build
+        run: dotnet build LearnHub.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --solution LearnHub.sln --configuration Release --no-build
+
+      - name: Publish
+        run: dotnet publish src/LearnHub/LearnHub.csproj --configuration Release --no-restore --output publish/app
+
+      # The app applies migrations on start-up; the script is kept for review or for applying changes manually.
+      - name: Generate the idempotent SQL Server migration script
+        run: >
+          dotnet ef migrations script --idempotent
+          --project src/LearnHub --context SqlServerDbContext --configuration Release --no-build
+          --output publish/sql/learnhub-sqlserver-migrations.sql
+
+      - name: Upload the application package
+        uses: actions/upload-artifact@v7
+        with:
+          name: learnhub-app
+          path: publish/app
+          retention-days: 14
+
+      - name: Upload the migration script
+        uses: actions/upload-artifact@v7
+        with:
+          name: learnhub-sql
+          path: publish/sql
+          retention-days: 30
+
+      - name: Explain skipped deployment
+        if: vars.AZURE_WEBAPP_NAME == ''
+        run: >
+          echo "::notice title=Azure deployment not configured::The app was built, tested and published as an artifact.
+          Run infra/provision.sh in Azure Cloud Shell and add the repository variables it prints to enable deployment
+          (see Documentation/Deployment.md)."
+
+  deploy:
+    name: Deploy to Azure App Service
+    needs: build
+    if: vars.AZURE_WEBAPP_NAME != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: production
+      url: ${{ vars.AZURE_WEBAPP_URL }}
+    env:
+      APP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+      APP_URL: ${{ vars.AZURE_WEBAPP_URL }}
+    steps:
+      - name: Check out the smoke test script
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts
+
+      - name: Download the application package
+        uses: actions/download-artifact@v8
+        with:
+          name: learnhub-app
+          path: app
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          package: app
+
+      # The free tiers start slowly (and Azure SQL may resume from auto-pause), so allow up to five minutes.
+      - name: Smoke test the live site
+        run: SMOKE_WAIT_SECONDS=300 bash scripts/smoke-test.sh "$APP_URL"
+
+      - name: Sign out of Azure
+        if: always()
+        run: az logout || true

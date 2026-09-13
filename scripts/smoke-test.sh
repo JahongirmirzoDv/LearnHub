@@ -6,6 +6,10 @@
 # Usage:  scripts/smoke-test.sh <base-url>
 #   e.g.  scripts/smoke-test.sh http://localhost:5080
 #         SMOKE_WAIT_SECONDS=300 scripts/smoke-test.sh https://<app-name>.azurewebsites.net
+#
+# SMOKE_FORWARDED_PROTO=https sends X-Forwarded-Proto, imitating a TLS-terminating proxy such as Azure App Service's
+# front end. Use it when calling a Production instance over plain HTTP that has ASPNETCORE_FORWARDEDHEADERS_ENABLED=true;
+# without it, Production refuses form pages because their antiforgery cookie is Secure-only.
 set -euo pipefail
 
 base="${1:?Usage: $0 <base-url>}"
@@ -15,9 +19,14 @@ body="$(mktemp)"
 trap 'rm -f "$body"' EXIT
 failures=0
 
+curl_options=(--silent --max-time 30)
+if [ -n "${SMOKE_FORWARDED_PROTO:-}" ]; then
+  curl_options+=(--header "X-Forwarded-Proto: ${SMOKE_FORWARDED_PROTO}")
+fi
+
 # Prints the HTTP status code (000 when unreachable) and keeps the response body in $body.
 request() {
-  curl --silent --max-time 30 --output "$body" --write-out "%{http_code}" "$base$1" || true
+  curl "${curl_options[@]}" --output "$body" --write-out "%{http_code}" "$base$1" || true
 }
 
 expect_status() {
@@ -75,7 +84,7 @@ for path in /Admin /Student/Dashboard /Student/MyCourses /Profile; do
   expect_status "$path" 302
 done
 
-headers="$(curl --silent --max-time 30 --dump-header - --output /dev/null "$base/" || true)"
+headers="$(curl "${curl_options[@]}" --dump-header - --output /dev/null "$base/" || true)"
 for header in Content-Security-Policy X-Content-Type-Options Referrer-Policy; do
   if printf '%s\n' "$headers" | grep -qi "^$header:"; then
     echo "ok    header $header"

@@ -1582,8 +1582,10 @@ a.route-title:hover {
 }
 
 /* ---------- Lesson player ---------- */
+/* minmax(0, 1fr) keeps long code lines scrolling inside their block instead of widening the page on phones. */
 .lesson-layout {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
 }
 

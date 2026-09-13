@@ -146,6 +146,8 @@ jobs:
             cd "$RUNNER_TEMP/learnhub"
             export ASPNETCORE_ENVIRONMENT=Production
             export ASPNETCORE_URLS=http://127.0.0.1:5080
+            # Same as Azure App Service on Linux: TLS ends at the proxy, which reports the scheme in X-Forwarded-Proto.
+            export ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
             export Database__Provider=SqlServer
             export ConnectionStrings__SqlServer="Server=localhost,1433;Database=LearnHubSmoke;User Id=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=True"
             export Storage__RootPath="$RUNNER_TEMP/storage"
@@ -155,7 +157,7 @@ jobs:
             nohup dotnet LearnHub.dll > "$log" 2>&1 &
           )
           status=0
-          bash scripts/smoke-test.sh http://127.0.0.1:5080 || status=1
+          SMOKE_FORWARDED_PROTO=https bash scripts/smoke-test.sh http://127.0.0.1:5080 || status=1
           grep -q "Demo data seeded" "$log" || { echo "::error::Demo data was not seeded on SQL Server."; status=1; }
           grep -q "Administrator account" "$log" || { echo "::error::The administrator account was not created."; status=1; }
           if grep -Eq "^(fail|crit):" "$log"; then echo "::error::The application logged errors."; status=1; fi
