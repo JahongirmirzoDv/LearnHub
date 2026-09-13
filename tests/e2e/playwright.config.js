@@ -14,8 +14,10 @@ module.exports = defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:5080",
-    // CI serves HTTPS with the untrusted ASP.NET Core development certificate.
+    // CI serves HTTPS with a throw-away self-signed certificate.
     ignoreHTTPSErrors: true,
+    // Entrance animations (the home page map draws in) are skipped, so screenshots always show the finished page.
+    reducedMotion: "reduce",
     trace: "retain-on-failure",
     screenshot: "only-on-failure"
   },

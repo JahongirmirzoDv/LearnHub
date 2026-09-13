@@ -738,6 +738,11 @@ code, pre, kbd, samp {
     display: block;
 }
 
+/* The lines are links; Bootstrap's link underline would otherwise run under the SVG labels. */
+.map-line {
+    text-decoration: none;
+}
+
 .map-line path {
     fill: none;
     stroke: var(--line);
