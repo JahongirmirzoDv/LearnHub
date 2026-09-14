@@ -4,8 +4,8 @@ using LearnHub.Services.Storage;
 using LearnHub.Tests.Infrastructure;
 using LearnHub.ViewModels.Admin;
 using LearnHub.ViewModels.Learning;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -63,6 +63,70 @@ public sealed class QuizServiceTests
     }
 
     [Fact]
+    public async Task The_start_time_comes_from_the_signed_token_issued_with_the_quiz_page()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (user, _, quiz) = await CreateEnrolledStudentAsync(database);
+        var clock = new ManualClock(new DateTimeOffset(2026, 9, 1, 10, 0, 0, TimeSpan.Zero));
+        var service = CreateQuizService(database, clock);
+
+        var take = await service.GetQuizToTakeAsync(quiz.Id, user.Id, cancellationToken: TestContext.Current.CancellationToken);
+        clock.Advance(TimeSpan.FromMinutes(7));
+        var submitted = await service.SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int>(), take.Model!.StartToken, TestContext.Current.CancellationToken);
+
+        var attempt = await database.NewContext().QuizAttempts.SingleAsync(a => a.Id == submitted.AttemptId, TestContext.Current.CancellationToken);
+        Assert.Equal(new DateTime(2026, 9, 1, 10, 0, 0, DateTimeKind.Utc), attempt.StartedAt);
+        Assert.Equal(new DateTime(2026, 9, 1, 10, 7, 0, DateTimeKind.Utc), attempt.CompletedAt);
+        Assert.Equal(TimeSpan.FromMinutes(7), (await service.GetResultAsync(attempt.Id, user.Id, isAdmin: false, TestContext.Current.CancellationToken))!.TimeTaken);
+    }
+
+    [Theory]
+    [InlineData("another student")]
+    [InlineData("altered token")]
+    [InlineData("no token")]
+    public async Task An_unusable_start_token_records_an_unknown_start_time(string scenario)
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (user, course, quiz) = await CreateEnrolledStudentAsync(database);
+        var other = await database.AddUserAsync("Other Student");
+        database.Context.Enrollments.Add(new Enrollment { UserId = other.Id, CourseId = course.Id });
+        await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var clock = new ManualClock(new DateTimeOffset(2026, 9, 1, 10, 0, 0, TimeSpan.Zero));
+        var service = CreateQuizService(database, clock);
+        var token = (await service.GetQuizToTakeAsync(quiz.Id, user.Id, TestContext.Current.CancellationToken)).Model!.StartToken;
+        clock.Advance(TimeSpan.FromMinutes(3));
+
+        var (submitter, submittedToken) = scenario switch
+        {
+            "another student" => (other.Id, token),
+            "altered token" => (user.Id, token[..10] + (token[10] == 'A' ? 'B' : 'A') + token[11..]),
+            _ => (user.Id, (string?)null)
+        };
+        var submitted = await service.SubmitAsync(quiz.Id, submitter, new Dictionary<int, int>(), submittedToken, TestContext.Current.CancellationToken);
+
+        var attempt = await database.NewContext().QuizAttempts.SingleAsync(a => a.Id == submitted.AttemptId, TestContext.Current.CancellationToken);
+        Assert.Equal(attempt.CompletedAt, attempt.StartedAt);
+    }
+
+    [Fact]
+    public async Task Passing_the_quiz_updates_the_stored_course_progress()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var user = await database.AddUserAsync();
+        var category = await database.AddCategoryAsync();
+        var course = await database.AddCourseAsync(category, resourceCount: 0, withQuiz: true);
+        var service = CreateQuizService(database);
+        await CreateEnrollmentService(database).EnrollAsync(user.Id, course.Id, TestContext.Current.CancellationToken);
+        var answers = course.Quizzes.First().Questions.ToDictionary(q => q.Id, q => q.Options.Single(o => o.IsCorrect).Id);
+
+        await service.SubmitAsync(course.Quizzes.First().Id, user.Id, answers, cancellationToken: TestContext.Current.CancellationToken);
+
+        var enrollment = await database.NewContext().Enrollments.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(100, enrollment.CompletionPercentage);
+        Assert.NotNull(enrollment.CompletedAt);
+    }
+
+    [Fact]
     public async Task The_quiz_page_never_contains_the_correct_answers()
     {
         await using var database = await TestDatabase.CreateAsync();
@@ -85,11 +149,24 @@ public sealed class QuizServiceTests
         return (user, course, course.Quizzes.First());
     }
 
-    internal static QuizService CreateQuizService(TestDatabase database) =>
-        new(database.Context,
-            new EnrollmentService(database.Context, new ProgressService(database.Context), new LookupService(database.Context), TimeProvider.System, NullLogger<EnrollmentService>.Instance),
-            TimeProvider.System,
+    internal static QuizService CreateQuizService(TestDatabase database, TimeProvider? clock = null)
+    {
+        clock ??= TimeProvider.System;
+        return new QuizService(
+            database.Context,
+            CreateEnrollmentService(database, clock),
+            new ProgressService(database.Context, clock),
+            new EphemeralDataProtectionProvider(),
+            clock,
             NullLogger<QuizService>.Instance);
+    }
+
+    internal static EnrollmentService CreateEnrollmentService(TestDatabase database, TimeProvider? clock = null) =>
+        new(database.Context,
+            new ProgressService(database.Context, clock ?? TimeProvider.System),
+            new LookupService(database.Context),
+            clock ?? TimeProvider.System,
+            NullLogger<EnrollmentService>.Instance);
 }
 
 public sealed class QuestionManagementServiceTests
@@ -101,7 +178,7 @@ public sealed class QuestionManagementServiceTests
         var (_, _, quiz) = await QuizServiceTests.CreateEnrolledStudentAsync(database);
         var questions = quiz.Questions.OrderBy(q => q.SortOrder).ToList();
         var foreignOption = questions[1].Options.First();
-        var service = new QuestionManagementService(database.Context, NullLogger<QuestionManagementService>.Instance);
+        var service = CreateQuestionService(database);
 
         var model = new QuestionFormViewModel
         {
@@ -134,7 +211,7 @@ public sealed class QuestionManagementServiceTests
         var wrongOption = question.Options.Single(o => !o.IsCorrect);
         var rightOption = question.Options.Single(o => o.IsCorrect);
         await QuizServiceTests.CreateQuizService(database).SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int> { [question.Id] = wrongOption.Id }, cancellationToken: TestContext.Current.CancellationToken);
-        var service = new QuestionManagementService(database.Context, NullLogger<QuestionManagementService>.Instance);
+        var service = CreateQuestionService(database);
 
         var result = await service.UpdateAsync(question.Id, new QuestionFormViewModel
         {
@@ -152,6 +229,37 @@ public sealed class QuestionManagementServiceTests
         Assert.Null(answer.SelectedOptionId);
         Assert.Equal(1, await verify.QuizAttempts.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
+
+    [Fact]
+    public async Task Question_points_are_saved_and_used_for_new_attempts()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (user, _, quiz) = await QuizServiceTests.CreateEnrolledStudentAsync(database);
+        var questions = quiz.Questions.OrderBy(q => q.SortOrder).ToList();
+        var heavy = questions[1];
+        var options = heavy.Options.OrderBy(o => o.SortOrder).ToList();
+
+        var update = await CreateQuestionService(database).UpdateAsync(heavy.Id, new QuestionFormViewModel
+        {
+            Id = heavy.Id,
+            QuizId = quiz.Id,
+            Text = heavy.Text,
+            Points = 3,
+            Options = options.Select(o => new AnswerOptionInput { Id = o.Id, Text = o.Text }).ToList(),
+            CorrectOptionIndex = options.FindIndex(o => o.IsCorrect)
+        }, TestContext.Current.CancellationToken);
+        Assert.True(update.Succeeded);
+
+        // Only the three-point question is answered correctly: 3 of 4 points.
+        var answers = new Dictionary<int, int> { [heavy.Id] = heavy.Options.Single(o => o.IsCorrect).Id };
+        var submitted = await QuizServiceTests.CreateQuizService(database).SubmitAsync(quiz.Id, user.Id, answers, cancellationToken: TestContext.Current.CancellationToken);
+
+        var attempt = await database.NewContext().QuizAttempts.SingleAsync(a => a.Id == submitted.AttemptId, TestContext.Current.CancellationToken);
+        Assert.Equal((3, 4, 75), (attempt.Score, attempt.MaxScore, attempt.ScorePercent));
+    }
+
+    private static QuestionManagementService CreateQuestionService(TestDatabase database) =>
+        new(database.Context, new ProgressService(database.Context, TimeProvider.System), NullLogger<QuestionManagementService>.Instance);
 }
 
 public sealed class CourseManagementServiceTests
@@ -182,13 +290,5 @@ public sealed class CourseManagementServiceTests
         Assert.False(await verify.Enrollments.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
         Assert.True(await verify.Users.AnyAsync(u => u.Id == user.Id, cancellationToken: TestContext.Current.CancellationToken));
         Directory.Delete(storageRoot, recursive: true);
-    }
-
-    private sealed class TestHostEnvironment : IHostEnvironment
-    {
-        public string EnvironmentName { get; set; } = "Testing";
-        public string ApplicationName { get; set; } = "LearnHub.Tests";
-        public string ContentRootPath { get; set; } = Path.GetTempPath();
-        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
     }
 }

@@ -13,27 +13,27 @@ public sealed class TestDatabase : IAsyncDisposable
 {
     private readonly SqliteConnection _connection;
 
-    private TestDatabase(SqliteConnection connection, SqliteDbContext context)
+    private TestDatabase(SqliteConnection connection, ApplicationDbContext context)
     {
         _connection = connection;
         Context = context;
     }
 
-    public SqliteDbContext Context { get; }
+    public ApplicationDbContext Context { get; }
 
     public static async Task<TestDatabase> CreateAsync()
     {
         var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<SqliteDbContext>().UseSqlite(connection).Options;
-        var context = new SqliteDbContext(options);
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        var context = new ApplicationDbContext(options);
         await context.Database.MigrateAsync();
         return new TestDatabase(connection, context);
     }
 
     /// <summary>A second context on the same database, useful to verify what was really saved.</summary>
-    public SqliteDbContext NewContext() =>
-        new(new DbContextOptionsBuilder<SqliteDbContext>().UseSqlite(_connection).Options);
+    public ApplicationDbContext NewContext() =>
+        new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options);
 
     public async Task<ApplicationUser> AddUserAsync(string name = "Test Learner")
     {

@@ -12,9 +12,9 @@ public sealed class QuizGraderTests
 {
     private static readonly IReadOnlyList<GradingQuestion> Questions =
     [
-        new(1, [new GradingOption(11, true), new GradingOption(12, false)]),
-        new(2, [new GradingOption(21, false), new GradingOption(22, true)]),
-        new(3, [new GradingOption(31, true), new GradingOption(32, false)])
+        new(1, 1, [new GradingOption(11, true), new GradingOption(12, false)]),
+        new(2, 1, [new GradingOption(21, false), new GradingOption(22, true)]),
+        new(3, 1, [new GradingOption(31, true), new GradingOption(32, false)])
     ];
 
     [Fact]
@@ -35,6 +35,23 @@ public sealed class QuizGraderTests
 
         Assert.Equal(66, result.ScorePercent);
         Assert.False(result.Passed);
+    }
+
+    [Fact]
+    public void Questions_are_weighted_by_their_points()
+    {
+        IReadOnlyList<GradingQuestion> weighted =
+        [
+            new(1, 1, [new GradingOption(11, true), new GradingOption(12, false)]),
+            new(2, 3, [new GradingOption(21, true), new GradingOption(22, false)])
+        ];
+
+        var onlyHeavy = QuizGrader.Grade(weighted, new Dictionary<int, int> { [1] = 12, [2] = 21 }, passMarkPercent: 70);
+        var onlyLight = QuizGrader.Grade(weighted, new Dictionary<int, int> { [1] = 11, [2] = 22 }, passMarkPercent: 70);
+
+        Assert.Equal((3, 4, 75, true), (onlyHeavy.Score, onlyHeavy.MaxScore, onlyHeavy.ScorePercent, onlyHeavy.Passed));
+        Assert.Equal((1, 4, 25, false), (onlyLight.Score, onlyLight.MaxScore, onlyLight.ScorePercent, onlyLight.Passed));
+        Assert.Equal(1, onlyHeavy.CorrectCount);
     }
 
     [Fact]

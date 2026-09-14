@@ -1,7 +1,10 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using LearnHub.Models;
+using LearnHub.Services;
 using LearnHub.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LearnHub.Tests.Integration;
 
@@ -47,6 +50,20 @@ public sealed partial class StudentJourneyTests(LearnHubWebApplicationFactory fa
 
         Assert.Contains("Networking basics quiz", await client.GetHtmlAsync("/Quizzes/History"));
         Assert.Contains(CourseTitle, await client.GetHtmlAsync("/Student/Dashboard"));
+
+        // The Quizzes and Progress pages reflect the pass, and the enrolment stores the same progress as calculated live.
+        var quizzes = await client.GetHtmlAsync("/Quizzes");
+        Assert.Contains("Networking basics quiz", quizzes);
+        Assert.Contains("Passed", quizzes);
+        Assert.Contains(CourseTitle, await client.GetHtmlAsync("/Student/Progress"));
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<LearnHub.Data.ApplicationDbContext>();
+            var enrollment = await db.Enrollments.SingleAsync(e => e.CourseId == course.Id && e.User.FullName == "Journey Student", TestContext.Current.CancellationToken);
+            var live = await scope.ServiceProvider.GetRequiredService<IProgressService>().GetForCourseAsync(enrollment.UserId, course.Id, TestContext.Current.CancellationToken);
+            Assert.Equal(2, live.CompletedItems);
+            Assert.Equal(live.Percent, enrollment.CompletionPercentage);
+        }
 
         // Another student cannot open this result (IDOR protection).
         var otherStudent = factory.CreateBrowserClient();
@@ -102,6 +119,7 @@ public sealed partial class StudentJourneyTests(LearnHubWebApplicationFactory fa
         var valid = await client.SubmitFormAsync("/Profile", "/Profile", new Dictionary<string, string>
         {
             ["FullName"] = "Renamed Student",
+            ["Email"] = email,
             ["Bio"] = "Second-year software engineering student."
         });
         Assert.Equal(HttpStatusCode.Redirect, valid.StatusCode);
@@ -111,11 +129,52 @@ public sealed partial class StudentJourneyTests(LearnHubWebApplicationFactory fa
         Assert.Equal("Second-year software engineering student.", saved.Bio);
     }
 
+    [Fact]
+    public async Task Changing_the_email_address_needs_the_current_password_and_an_unused_address()
+    {
+        var client = factory.CreateBrowserClient();
+        var email = await client.RegisterStudentAsync("Email Student");
+        var newEmail = $"renamed-{Guid.NewGuid():N}@learnhub.test";
+        Dictionary<string, string> Fields(string address, string? password = null)
+        {
+            var fields = new Dictionary<string, string> { ["FullName"] = "Email Student", ["Email"] = address };
+            if (password is not null)
+            {
+                fields["CurrentPassword"] = password;
+            }
+
+            return fields;
+        }
+
+        var withoutPassword = await client.SubmitFormAsync("/Profile", "/Profile", Fields(newEmail));
+        Assert.Equal(HttpStatusCode.OK, withoutPassword.StatusCode);
+        Assert.Contains("Enter your current password to change your email address.", await withoutPassword.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        var taken = await client.SubmitFormAsync("/Profile", "/Profile", Fields(LearnHubWebApplicationFactory.AdminEmail, LearnHubWebApplicationFactory.NewUserPassword));
+        Assert.Contains("Another account already uses this email address.", await taken.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        // A posted role is ignored: users can never change their own role.
+        var fields = Fields(newEmail, LearnHubWebApplicationFactory.NewUserPassword);
+        fields["Roles"] = AppRoles.Admin;
+        fields["Roles[0]"] = AppRoles.Admin;
+        var changed = await client.SubmitFormAsync("/Profile", "/Profile", fields);
+        Assert.Equal("/Profile", changed.LocationPath());
+
+        var user = await factory.WithDbAsync(db => db.Users.SingleAsync(u => u.Email == newEmail));
+        Assert.Equal(newEmail, user.UserName);
+        Assert.False(await factory.WithDbAsync(db => db.Users.AnyAsync(u => u.Email == email)));
+        Assert.False(await factory.WithDbAsync(db => db.UserRoles.AnyAsync(ur => ur.UserId == user.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.Name == AppRoles.Admin))));
+
+        // The new address is the sign-in name from now on.
+        Assert.Equal(HttpStatusCode.Redirect, (await factory.CreateBrowserClient().LoginAsync(newEmail, LearnHubWebApplicationFactory.NewUserPassword)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await factory.CreateBrowserClient().LoginAsync(email, LearnHubWebApplicationFactory.NewUserPassword)).StatusCode);
+    }
+
     private async Task<CourseFixture> LoadCourseAsync() => await factory.WithDbAsync(async db =>
     {
         var course = await db.Courses.Where(c => c.Title == CourseTitle).Select(c => new { c.Id }).SingleAsync();
         var lockedResourceId = await db.LearningResources
-            .Where(r => r.CourseId == course.Id && !r.IsPreview && r.Type == Models.ResourceType.Article)
+            .Where(r => r.CourseId == course.Id && !r.IsPreview && r.Type == ResourceType.Article)
             .Select(r => r.Id)
             .FirstAsync();
         var quiz = await db.Quizzes

@@ -75,7 +75,7 @@ public sealed class AdminManagementTests(LearnHubWebApplicationFactory factory) 
     public async Task Course_create_with_cover_edit_publish_and_delete()
     {
         var admin = await AdminClientAsync();
-        var categoryId = await factory.WithDbAsync(db => db.Categories.Where(c => c.Name == "Databases").Select(c => c.Id).SingleAsync());
+        var categoryId = await factory.WithDbAsync(db => db.Categories.Where(c => c.Name == "Database").Select(c => c.Id).SingleAsync());
 
         var invalid = await admin.SubmitMultipartFormAsync("/Admin/Courses/Create", "/Admin/Courses/Create",
             CourseFields(categoryId, title: ""), "ThumbnailFile", "cover.png", PngBytes, "image/png");
@@ -116,12 +116,12 @@ public sealed class AdminManagementTests(LearnHubWebApplicationFactory factory) 
     public async Task Resources_are_created_validated_streamed_and_deleted()
     {
         var admin = await AdminClientAsync();
-        var courseId = await factory.WithDbAsync(db => db.Courses.Where(c => c.Title == "Cloud Computing Foundations").Select(c => c.Id).SingleAsync());
+        var courseId = await factory.WithDbAsync(db => db.Courses.Where(c => c.Title == "Deploying Web Applications").Select(c => c.Id).SingleAsync());
 
         var article = await admin.SubmitFormAsync($"/Admin/Resources/Create?courseId={courseId}", "/Admin/Resources/Create", new Dictionary<string, string>
         {
             ["CourseId"] = courseId.ToString(),
-            ["Title"] = "Choosing an Azure region",
+            ["Title"] = "Choosing a hosting region",
             ["Type"] = "Article",
             ["Body"] = "## Why regions matter\n\nPick a region close to your users to reduce latency and meet data rules.",
             ["SortOrder"] = "10",

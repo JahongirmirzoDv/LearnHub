@@ -1,10 +1,12 @@
 using LearnHub.Models;
 using LearnHub.Services;
+using LearnHub.Services.Storage;
 using LearnHub.Tests.Infrastructure;
 using LearnHub.ViewModels.Admin;
 using LearnHub.ViewModels.Public;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace LearnHub.Tests.Services;
 
@@ -76,6 +78,46 @@ public sealed class CourseCatalogServiceTests
     }
 
     [Fact]
+    public async Task Search_matches_published_lesson_titles_but_never_drafts()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var category = await database.AddCategoryAsync();
+        var course = await database.AddCourseAsync(category, "Algorithms", resourceCount: 2);
+        var lessons = course.Resources.OrderBy(r => r.SortOrder).ToList();
+        lessons[0].Title = "Binary search trees";
+        lessons[1].Title = "Secret draft topic";
+        lessons[1].IsPublished = false;
+        await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var catalog = CreateCatalog(database);
+
+        var found = await catalog.SearchAsync(new CourseSearchQuery { Q = "binary search" }, userId: null, TestContext.Current.CancellationToken);
+        var draft = await catalog.SearchAsync(new CourseSearchQuery { Q = "secret draft" }, userId: null, TestContext.Current.CancellationToken);
+
+        var card = Assert.Single(found.Results.Items);
+        Assert.Equal(["Binary search trees"], card.MatchingLessons);
+        Assert.Equal(1, card.ResourceCount);
+        Assert.Empty(draft.Results.Items);
+    }
+
+    [Fact]
+    public async Task Public_categories_count_only_published_courses()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var category = await database.AddCategoryAsync("Mathematics");
+        await database.AddCategoryAsync("Other");
+        await database.AddCourseAsync(category, "Discrete maths");
+        await database.AddCourseAsync(category, "Hidden draft", published: false);
+        var service = new CategoryService(database.Context, NullLogger<CategoryService>.Instance);
+
+        var categories = await service.GetPublicCategoriesAsync(TestContext.Current.CancellationToken);
+
+        var maths = categories.Single(c => c.Name == "Mathematics");
+        Assert.Equal(1, maths.CourseCount);
+        Assert.Equal(["Discrete maths"], maths.ExampleCourseTitles);
+        Assert.Equal(0, categories.Single(c => c.Name == "Other").CourseCount);
+    }
+
+    [Fact]
     public async Task Unpublished_course_details_are_hidden_from_everyone_except_admins()
     {
         await using var database = await TestDatabase.CreateAsync();
@@ -90,7 +132,7 @@ public sealed class CourseCatalogServiceTests
     private static CourseCatalogService CreateCatalog(TestDatabase database) =>
         new(database.Context,
             new CategoryService(database.Context, NullLogger<CategoryService>.Instance),
-            new ProgressService(database.Context));
+            new ProgressService(database.Context, TimeProvider.System));
 }
 
 public sealed class EnrollmentAndProgressServiceTests
@@ -119,7 +161,7 @@ public sealed class EnrollmentAndProgressServiceTests
         var user = await database.AddUserAsync();
         var category = await database.AddCategoryAsync();
         var course = await database.AddCourseAsync(category, resourceCount: 3, withQuiz: true);
-        var progress = new ProgressService(database.Context);
+        var progress = new ProgressService(database.Context, TimeProvider.System);
 
         Assert.Equal(new(0, 4), await progress.GetForCourseAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken));
 
@@ -156,13 +198,86 @@ public sealed class EnrollmentAndProgressServiceTests
         Assert.True((await enrollments.LeaveAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         await enrollments.EnrollAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken);
 
-        var progress = await new ProgressService(database.NewContext()).GetForCourseAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken);
+        var progress = await new ProgressService(database.NewContext(), TimeProvider.System).GetForCourseAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(50, progress.Percent);
+        // Re-enrolling restores the stored progress straight away.
+        Assert.Equal(50, (await database.NewContext().Enrollments.SingleAsync(TestContext.Current.CancellationToken)).CompletionPercentage);
+    }
+
+    [Fact]
+    public async Task Stored_progress_is_recalculated_and_completion_is_cleared_when_new_content_is_added()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var user = await database.AddUserAsync();
+        var category = await database.AddCategoryAsync();
+        var course = await database.AddCourseAsync(category, resourceCount: 2, withQuiz: false);
+        var clock = new ManualClock(new DateTimeOffset(2026, 9, 2, 8, 30, 0, TimeSpan.Zero));
+        var progress = new ProgressService(database.Context, clock);
+        await CreateEnrollmentService(database).EnrollAsync(user.Id, course.Id, TestContext.Current.CancellationToken);
+        foreach (var lesson in course.Resources)
+        {
+            database.Context.ResourceCompletions.Add(new ResourceCompletion { UserId = user.Id, LearningResourceId = lesson.Id });
+        }
+
+        await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await progress.SyncAsync(course.Id, cancellationToken: TestContext.Current.CancellationToken);
+
+        var completed = await database.NewContext().Enrollments.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(100, completed.CompletionPercentage);
+        Assert.Equal(clock.GetUtcNow().UtcDateTime, completed.CompletedAt);
+
+        // A draft lesson changes nothing; publishing it brings the course back below 100%.
+        var extra = new LearningResource { CourseId = course.Id, Title = "New lesson", Type = ResourceType.Article, Body = "Body text", SortOrder = 3, IsPublished = false };
+        database.Context.LearningResources.Add(extra);
+        await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await progress.SyncAsync(course.Id, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(100, (await database.NewContext().Enrollments.SingleAsync(TestContext.Current.CancellationToken)).CompletionPercentage);
+
+        extra.IsPublished = true;
+        await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await progress.SyncAsync(course.Id, cancellationToken: TestContext.Current.CancellationToken);
+
+        var reopened = await database.NewContext().Enrollments.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(66, reopened.CompletionPercentage);
+        Assert.Null(reopened.CompletedAt);
+    }
+
+    [Fact]
+    public async Task Draft_lessons_are_hidden_from_students_and_do_not_count_towards_progress()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var user = await database.AddUserAsync();
+        var category = await database.AddCategoryAsync();
+        var course = await database.AddCourseAsync(category, resourceCount: 2, withQuiz: true);
+        var draft = course.Resources.OrderBy(r => r.SortOrder).Last();
+        draft.IsPublished = false;
+        await database.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var enrollments = CreateEnrollmentService(database);
+        await enrollments.EnrollAsync(user.Id, course.Id, TestContext.Current.CancellationToken);
+        var storageRoot = Path.Combine(Path.GetTempPath(), "learnhub-tests", Guid.NewGuid().ToString("N"));
+        var lessons = new LearningResourceService(
+            database.Context,
+            enrollments,
+            new ProgressService(database.Context, TimeProvider.System),
+            new FileStorageService(Options.Create(new LearnHub.Infrastructure.StorageOptions { RootPath = storageRoot }), new TestHostEnvironment(), NullLogger<FileStorageService>.Instance),
+            TimeProvider.System,
+            NullLogger<LearningResourceService>.Instance);
+
+        Assert.Equal(new(0, 2), await new ProgressService(database.Context, TimeProvider.System).GetForCourseAsync(user.Id, course.Id, TestContext.Current.CancellationToken));
+        Assert.Equal(LearnHub.ViewModels.Learning.ResourceAccess.NotFound, (await lessons.GetForViewingAsync(draft.Id, user.Id, isAdmin: false, TestContext.Current.CancellationToken)).Access);
+        Assert.True((await lessons.ToggleCompletionAsync(draft.Id, user.Id, TestContext.Current.CancellationToken)).IsNotFound);
+
+        var adminView = await lessons.GetForViewingAsync(draft.Id, userId: null, isAdmin: true, TestContext.Current.CancellationToken);
+        Assert.Equal(LearnHub.ViewModels.Learning.ResourceAccess.Allowed, adminView.Access);
+        Assert.False(adminView.Model!.IsPublished);
+
+        var studentView = await lessons.GetForViewingAsync(course.Resources.OrderBy(r => r.SortOrder).First().Id, user.Id, isAdmin: false, TestContext.Current.CancellationToken);
+        Assert.DoesNotContain(studentView.Model!.Outline, item => item.Id == draft.Id);
     }
 
     private static EnrollmentService CreateEnrollmentService(TestDatabase database) =>
         new(database.Context,
-            new ProgressService(database.Context),
+            new ProgressService(database.Context, TimeProvider.System),
             new LookupService(database.Context),
             TimeProvider.System,
             NullLogger<EnrollmentService>.Instance);

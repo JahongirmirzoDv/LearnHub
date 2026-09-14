@@ -4,7 +4,7 @@ const AxeBuilder = require("@axe-core/playwright").default;
 const { login } = require("./helpers");
 
 // Automated WCAG 2.2 level A and AA rules. Automated checks find a large share of issues (contrast, names, labels,
-// landmarks, ARIA misuse) but not all of them, so the manual checklist in Documentation/Testing.md still applies.
+// landmarks, ARIA misuse) but not all of them, so the manual checklist in docs/TESTING.md still applies.
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 /** Scans each page and returns one readable line per violation, so a failure lists every problem at once. */

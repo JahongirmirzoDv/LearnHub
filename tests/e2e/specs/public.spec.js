@@ -8,13 +8,13 @@ test.describe("Guest experience", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Build real computing skills");
-    await expect(page.getByRole("heading", { name: "Popular courses" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Featured courses" })).toBeVisible();
 
     // Wide screens draw every category as a line on the map (phones get the category list instead).
     const map = page.locator(".interchange-map");
     if (await map.isVisible()) {
       const lines = map.locator(".map-line");
-      await expect(lines).toHaveCount(await page.locator(".line-list .line-chip").count());
+      await expect(lines).toHaveCount(await page.locator(".category-tile").count());
       const path = await lines.first().locator("path").evaluate((element) => {
         const style = getComputedStyle(element);
         return { stroke: style.stroke, dashOffset: style.strokeDashoffset, markup: element.parentElement?.outerHTML.slice(0, 400) };
@@ -50,7 +50,7 @@ test.describe("Guest experience", () => {
     await screenshot(page, testInfo, "02-courses-search");
 
     await page.goto("/Courses");
-    await page.getByRole("link", { name: /^Databases/ }).first().click();
+    await page.getByRole("link", { name: /^Database\b/ }).first().click();
     await expect(page.getByRole("link", { name: "Relational Database Design with SQL" })).toBeVisible();
   });
 

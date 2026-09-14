@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.RegularExpressions;
-using LearnHub.Data;
 using LearnHub.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +9,8 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
 {
     [Theory]
     [InlineData("/", "Build real computing skills")]
-    [InlineData("/Courses", "Search by topic or instructor")]
+    [InlineData("/Courses", "Search course titles, descriptions, categories and lesson titles")]
+    [InlineData("/Categories", "Every category is one line on the LearnHub map")]
     [InlineData("/About", "About LearnHub")]
     [InlineData("/Contact", "Contact the LearnHub team")]
     [InlineData("/Privacy", "Privacy notice")]
@@ -27,9 +27,21 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     {
         var html = await factory.CreateBrowserClient().GetHtmlAsync("/Courses");
 
-        Assert.Contains("C# Programming Fundamentals", html);
+        // The seeded catalogue holds 12 courses and only the draft "Git and GitHub for Team Projects" is unpublished.
+        Assert.Contains("11 courses found", html);
         Assert.Contains("Relational Database Design with SQL", html);
         Assert.DoesNotContain("Git and GitHub for Team Projects", html);
+    }
+
+    [Fact]
+    public async Task Courses_beyond_the_first_page_are_reachable_by_paging()
+    {
+        // The catalogue is newest-first and holds more courses than fit on one page, so the oldest seeded course is
+        // only reachable through the pager. This guards the paging links, not just the first page.
+        var html = await factory.CreateBrowserClient().GetHtmlAsync("/Courses?page=2");
+
+        Assert.Contains("C# Programming Fundamentals", html);
+        Assert.Contains("Relational Database Design with SQL", await factory.CreateBrowserClient().GetHtmlAsync("/Courses"));
     }
 
     [Fact]
@@ -39,7 +51,50 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
 
         Assert.Contains("Relational Database Design with SQL", html);
         Assert.DoesNotContain("Networking Fundamentals", html);
+    }
+
+    [Fact]
+    public async Task Search_matches_lesson_titles_and_shows_the_matching_lessons()
+    {
+        var html = await factory.CreateBrowserClient().GetHtmlAsync("/Courses?q=De%20Morgan");
+
         Assert.Contains("1 course found", html);
+        Assert.Contains("Discrete Mathematics for Computing", html);
+        Assert.Contains("Matching lessons", html);
+        Assert.Contains("Logic, truth tables and De Morgan&#x27;s laws", html);
+    }
+
+    [Fact]
+    public async Task Search_matches_full_course_descriptions()
+    {
+        // "persistent volume" appears only in the long description of the deployment course, not in its title or summary.
+        var html = await factory.CreateBrowserClient().GetHtmlAsync("/Courses?q=persistent%20volume");
+
+        Assert.Contains("Deploying Web Applications", html);
+        Assert.Contains("1 course found", html);
+    }
+
+    [Fact]
+    public async Task Search_with_no_matches_shows_an_empty_state()
+    {
+        var html = await factory.CreateBrowserClient().GetHtmlAsync("/Courses?q=quantum%20basket%20weaving");
+
+        Assert.Contains("No courses match these filters", html);
+    }
+
+    [Fact]
+    public async Task Categories_page_lists_every_category_with_its_published_courses()
+    {
+        var html = await factory.CreateBrowserClient().GetHtmlAsync("/Categories");
+
+        foreach (var name in new[] { "Programming", "Web Development", "Database", "Networking", "Cybersecurity", "Software Engineering", "Mathematics", "Other" })
+        {
+            Assert.Contains($">{name}</h2>", html);
+        }
+
+        Assert.Contains("Deploying Web Applications", html);
+        // The Git course is a draft, so it is never listed publicly.
+        Assert.DoesNotContain("Git and GitHub for Team Projects", html);
     }
 
     [Fact]
@@ -50,7 +105,7 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
         var html = await factory.CreateBrowserClient().GetHtmlAsync($"/Courses?categoryId={categoryId}");
 
         Assert.Contains("Web Application Security Basics", html);
-        Assert.DoesNotContain("Cloud Computing Foundations", html);
+        Assert.DoesNotContain("Deploying Web Applications", html);
     }
 
     [Fact]
@@ -155,8 +210,10 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     {
         var html = await factory.CreateBrowserClient().GetHtmlAsync("/");
 
-        var categoryLinks = Regex.Count(html, "class=\"[^\"]*\\bline-chip\\b");
-        var mapLines = Regex.Count(html, "class=\"[^\"]*\\bmap-line\\b");
+        // The class must be the whole first token: a plain \b would also count the "category-tile-name" and
+        // "category-tile-count" spans nested inside each tile.
+        var categoryLinks = Regex.Count(html, "class=\"category-tile[ \"]");
+        var mapLines = Regex.Count(html, "class=\"map-line[ \"]");
 
         Assert.True(categoryLinks > 0, "The home page lists no categories.");
         Assert.Equal(categoryLinks, mapLines);
@@ -168,9 +225,9 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     {
         var connectionString = await factory.WithDbAsync(db => Task.FromResult(db.Database.GetConnectionString()));
 
-        // Never a developer's database file: in-memory SQLite, or a throw-away database on the CI SQL Server.
-        var expected = factory.Provider == DatabaseProvider.SqlServer ? "LearnHubTests_" : "Mode=Memory";
-        Assert.Contains(expected, connectionString);
+        // Never a developer's database file: each factory uses its own in-memory SQLite database.
+        Assert.Contains("Mode=Memory", connectionString);
+        Assert.Equal(factory.ConnectionString, connectionString);
     }
 
     private Task<int> CourseIdAsync(string title) =>

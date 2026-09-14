@@ -5,7 +5,10 @@ namespace LearnHub.Tests.Integration;
 
 public sealed class AuthorizationTests(LearnHubWebApplicationFactory factory) : IClassFixture<LearnHubWebApplicationFactory>
 {
-    public static TheoryData<string> StudentPages => ["/Student/Dashboard", "/Student/MyCourses", "/Quizzes/History", "/Profile"];
+    public static TheoryData<string> StudentPages =>
+        ["/Student/Dashboard", "/Student/MyCourses", "/Student/Progress", "/Quizzes", "/Quizzes/History", "/Profile"];
+
+    public static TheoryData<string> StudentOnlyPages => ["/Student/Dashboard", "/Student/Progress", "/Quizzes"];
 
     public static TheoryData<string> AdminPages =>
     [
@@ -66,6 +69,19 @@ public sealed class AuthorizationTests(LearnHubWebApplicationFactory factory) : 
         await client.LoginAsDemoStudentAsync();
 
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(url, cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
+    }
+
+    [Theory]
+    [MemberData(nameof(StudentOnlyPages))]
+    public async Task Administrators_are_denied_student_only_pages(string url)
+    {
+        var client = factory.CreateBrowserClient();
+        await client.LoginAsAdminAsync();
+
+        var response = await client.GetAsync(url, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.StartsWith("/Account/AccessDenied", response.LocationPath());
     }
 
     [Fact]

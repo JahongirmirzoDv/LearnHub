@@ -12,25 +12,28 @@ public sealed class DatabaseModelTests
     {
         using var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
-        var options = new DbContextOptionsBuilder<SqliteDbContext>().UseSqlite(connection).Options;
-        using var db = new SqliteDbContext(options);
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var db = new ApplicationDbContext(options);
 
         Assert.True(db.Database.EnsureCreated());
         Assert.Empty(db.Courses);
     }
 
     [Fact]
-    public void SqlServer_create_script_can_be_generated_from_the_model()
+    public void Create_script_enforces_the_integrity_rules()
     {
-        var options = new DbContextOptionsBuilder<SqlServerDbContext>()
-            .UseSqlServer("Server=localhost;Database=LearnHubModelCheck;TrustServerCertificate=true")
-            .Options;
-        using var db = new SqlServerDbContext(options);
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var db = new ApplicationDbContext(options);
 
         var script = db.Database.GenerateCreateScript();
 
-        Assert.Contains("CREATE TABLE [Courses]", script);
-        Assert.Contains("CREATE UNIQUE INDEX [IX_Enrollments_UserId_CourseId]", script);
+        Assert.Contains("CREATE UNIQUE INDEX \"IX_Enrollments_UserId_CourseId\"", script);
+        Assert.Contains("CREATE UNIQUE INDEX \"IX_Categories_Name\"", script);
+        Assert.Contains("CREATE UNIQUE INDEX \"IX_ResourceCompletions_UserId_LearningResourceId\"", script);
+        Assert.Contains("CONSTRAINT \"CK_Enrollments_CompletionPercentage\"", script);
+        Assert.Contains("CONSTRAINT \"CK_Questions_Points\"", script);
+        Assert.Contains("CONSTRAINT \"CK_QuizAttempts_Score\"", script);
     }
 
     [Theory]
@@ -43,8 +46,8 @@ public sealed class DatabaseModelTests
     public void Delete_behaviour_is_intentional(Type entity, string foreignKeyProperty, DeleteBehavior expected)
     {
         using var connection = new SqliteConnection("Data Source=:memory:");
-        var options = new DbContextOptionsBuilder<SqliteDbContext>().UseSqlite(connection).Options;
-        using var db = new SqliteDbContext(options);
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var db = new ApplicationDbContext(options);
 
         var foreignKey = db.Model.FindEntityType(entity)!
             .GetForeignKeys()
