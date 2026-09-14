@@ -1,8 +1,8 @@
 # LearnHub – Web-Based Learning Management System
 
-[![CI](https://github.com/JahongirmirzoDv/LearnHub/actions/workflows/ci.yml/badge.svg)](https://github.com/JahongirmirzoDv/LearnHub/actions/workflows/ci.yml)
-[![Deploy to Azure](https://github.com/JahongirmirzoDv/LearnHub/actions/workflows/deploy.yml/badge.svg)](https://github.com/JahongirmirzoDv/LearnHub/actions/workflows/deploy.yml)
-[![GitHub Pages](https://github.com/JahongirmirzoDv/LearnHub/actions/workflows/pages.yml/badge.svg)](https://github.com/JahongirmirzoDv/LearnHub/actions/workflows/pages.yml)
+[![CI](https://github.com/KhayitOff/LearnHub/actions/workflows/ci.yml/badge.svg)](https://github.com/KhayitOff/LearnHub/actions/workflows/ci.yml)
+[![Deploy to Azure](https://github.com/KhayitOff/LearnHub/actions/workflows/deploy.yml/badge.svg)](https://github.com/KhayitOff/LearnHub/actions/workflows/deploy.yml)
+[![GitHub Pages](https://github.com/KhayitOff/LearnHub/actions/workflows/pages.yml/badge.svg)](https://github.com/KhayitOff/LearnHub/actions/workflows/pages.yml)
 
 LearnHub is an ASP.NET Core MVC learning management system built for the **CT050-3-2-WAPP Web Applications** group
 assignment at Asia Pacific University of Technology & Innovation. Guests browse and search a catalogue of computing
