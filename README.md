@@ -149,7 +149,7 @@ resources, 9 quizzes and demo learner activity.
 ### Working without the .NET SDK
 
 Team members with little disk space can work entirely in the cloud: every push runs the build, all tests and the
-browser tests in GitHub Actions, and the **EF Core migrations** workflow (Actions tab → Run workflow) generates
+browser tests in GitHub Actions, and the **EF Core migration (cloud)** workflow (Actions tab → Run workflow) generates
 migrations for both database providers and commits them.
 
 ## Accounts and the first administrator
