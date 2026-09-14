@@ -210,9 +210,10 @@ function coverHtml() {
   progress tracking for students, with a full administration area. Deployed on Railway with a Firebase Hosting
   presentation site.</p>
   <dl>
+    <dt>Author</dt><dd>Khaytboy Khayrullaev (TP072305)</dd>
     <dt>Module</dt><dd>CT050-3-2-WAPP Web Applications</dd>
     <dt>Institution</dt><dd>Asia Pacific University of Technology &amp; Innovation</dd>
-    <dt>Assessment</dt><dd>Group assignment</dd>
+    <dt>Assessment</dt><dd>Group assignment, carried out individually</dd>
     <dt>Live application</dt><dd>learnhub-production-7081.up.railway.app</dd>
     <dt>Project website</dt><dd>learnhub-wapp.web.app</dd>
     <dt>Repository</dt><dd>github.com/KhayitOff/LearnHub</dd>

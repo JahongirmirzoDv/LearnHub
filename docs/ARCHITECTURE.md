@@ -4,7 +4,7 @@
 
 LearnHub is a single ASP.NET Core MVC application (.NET 10 LTS) organised in clear,
 conventional layers. We deliberately avoided Clean Architecture / CQRS / microservices:
-the goal is a maintainable application that every team member can explain.
+the goal is a maintainable application whose every part can be explained.
 
 ```
 Browser (HTML5, CSS3, Bootstrap 5, JavaScript)
@@ -392,5 +392,5 @@ anyway:
 Development machines with little free disk space do not need the .NET SDK locally: GitHub Actions
 restores, builds, runs the whole test suite, builds and exercises the container the way Railway
 does, runs the browser and accessibility tests, and generates EF Core migrations
-(`ef-migrations.yml`). Team members with the SDK installed can use the normal local commands
+(`ef-migrations.yml`). With the SDK installed you can use the normal local commands
 documented in the README and in [DEPLOYMENT.md](DEPLOYMENT.md).

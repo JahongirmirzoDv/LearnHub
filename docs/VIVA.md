@@ -1,7 +1,7 @@
 # LearnHub – Viva Preparation
 
 Likely questions with model answers based on this code base. File paths are relative to `src/LearnHub/` unless they
-start with `tests/`, `docs/`, `.github/`, `FirebaseLanding/` or `scripts/`. Every member should be able to answer the
+start with `tests/`, `docs/`, `.github/`, `FirebaseLanding/` or `scripts/`. You should be able to answer the
 architecture, database, hosting and security questions, not only those in their own area.
 
 ## 1. Project and requirements

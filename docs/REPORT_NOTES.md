@@ -14,7 +14,7 @@ serves from `FirebaseLanding/assets/screens/`.
 | Module | CT050-3-2-WAPP Web Applications |
 | Assessment | Group assignment |
 | Institution | Asia Pacific University of Technology & Innovation (APU) |
-| Team members | Member 1 (TP000000), Member 2 (TP000000), Member 3 (TP000000), Member 4 (TP000000) |
+| Team members | Khaytboy Khayrullaev (TP072305) — carried out individually |
 | Lecturer | *Lecturer's name* |
 | Intake | *Intake code* |
 | Submission date | *Date* |
@@ -127,10 +127,10 @@ gantt
 
 ### 2.6 Team roles
 
-Member 1 led architecture, authentication, the security review and deployment. Member 2 built the catalogue,
-enrolment and student dashboard. Member 3 built lessons, uploads, quizzes, grading and progress. Member 4 built the
-admin area, the automated tests, the documentation and the presentation site. Details are in
-[TEAM.md](TEAM.md); the full proposal is in [PROPOSAL.md](PROPOSAL.md).
+This submission was completed by one member working alone, so a single person covered every role: architecture,
+database design, authentication, the public site, the student area, the administration area, the security review, the
+automated tests, the documentation and the deployment. The areas covered and the way the work was organised are set
+out in [TEAM.md](TEAM.md); the full proposal is in [PROPOSAL.md](PROPOSAL.md).
 
 ## 3. System design
 
@@ -798,11 +798,8 @@ accounts are generated into the git-ignored `App_Data/demo-credentials.json`; se
 the `Dockerfile` and mount a volume at `/data`; every variable is documented in `.env.example`. Full instructions are in
 the [README](../README.md); production deployment is in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-### Appendix E – Individual contributions
+### Appendix E – Individual contribution
 
 | Member | Contribution summary | Signature |
 |--------|----------------------|-----------|
-| Member 1 (TP000000) | *to be completed* | |
-| Member 2 (TP000000) | *to be completed* | |
-| Member 3 (TP000000) | *to be completed* | |
-| Member 4 (TP000000) | *to be completed* | |
+| Khaytboy Khayrullaev (TP072305) | Sole author: requirements, architecture, database, application code, tests, documentation and deployment — the complete system | |

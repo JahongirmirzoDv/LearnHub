@@ -165,7 +165,7 @@ In production the same settings come from environment variables (`Seed__AdminPas
 
 ### Working without the .NET SDK
 
-Team members with little disk space can work entirely in the cloud: every push runs the build and all tests in GitHub
+You can work entirely in the cloud: every push runs the build and all tests in GitHub
 Actions, and the **EF Core migration (cloud)** workflow (Actions tab → Run workflow) generates a migration and commits it.
 
 ## Accounts and the first administrator
@@ -317,8 +317,9 @@ LearnHub/
 
 ## Team and workflow
 
-Four members share the work (names and student IDs in [Team](docs/TEAM.md)). `main` is always deployable; work happens
-on short-lived `feature/`, `fix/` and `docs/` branches merged through pull requests once CI passes. See
+**Khaytboy Khayrullaev** (TP072305) — carried out individually; every area of the system was built by the single
+author. See [Team](docs/TEAM.md) for the areas covered and how the work was organised. `main` is always deployable;
+work happens on short-lived `feature/`, `fix/` and `docs/` branches merged once CI passes. See
 [Git workflow](docs/GIT_WORKFLOW.md).
 
 To continue development: create a branch, make the change with its tests, open a pull request, and merge when the CI

@@ -58,8 +58,9 @@ Open a pull request into `main`. It can be merged when:
 
 1. All three CI jobs pass: **Build and test** (`build-and-test`); **Railway image, migrations and smoke test**
    (`container`); **Browser tests (mobile, tablet, desktop)** (`e2e`).
-2. At least one teammate has reviewed it (the owner of the area for shared files, see
-   [TEAM.md](TEAM.md)).
+2. The change has been reviewed against the requirement it serves (see
+   [REQUIREMENT_TRACEABILITY.md](REQUIREMENT_TRACEABILITY.md)); with a single author the CI jobs and that check stand in
+   for a second reviewer, which is why they are treated as mandatory rather than advisory.
 3. The description explains what changed and why, with screenshots for visible changes.
 
 Use **Squash and merge** for small branches so `main` keeps one meaningful commit per change, then delete the branch.

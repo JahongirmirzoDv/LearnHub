@@ -5,7 +5,7 @@
 | Project title | LearnHub – Web-Based Learning Management System |
 | Module | CT050-3-2-WAPP Web Applications (group assignment) |
 | Institution | Asia Pacific University of Technology & Innovation (APU) |
-| Team | Member 1 (TP000000), Member 2 (TP000000), Member 3 (TP000000), Member 4 (TP000000) |
+| Team | Khaytboy Khayrullaev (TP072305) — carried out individually |
 | Technology | ASP.NET Core MVC on .NET 10, C#, Razor, Bootstrap 5.3, Entity Framework Core 10 with SQLite, ASP.NET Core Identity |
 
 ## 1. Background and problem
@@ -157,7 +157,7 @@ flowchart TD
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Team members have little disk space for the .NET SDK | High | Medium | Build, test and generate migrations in GitHub Actions; only the repository is needed locally |
+| Little disk space for the .NET SDK | High | Medium | Build, test and generate migrations in GitHub Actions; only the repository is needed locally |
 | Passwords or connection strings leak into Git | Medium | High | User secrets locally; environment variables on Railway; `.env` is git-ignored and only `.env.example` with placeholders is committed; CI generates throw-away passwords and masks them |
 | The SQLite file is lost on redeploy because the volume is missing | Medium | High | The database, the Data Protection key ring and uploads all live under `/data`; CI mounts a volume in the same place and restarts the container to prove migrations are not re-applied |
 | A single SQLite instance cannot serve many concurrent writers | Low | Medium | The deployment is deliberately single-instance and read-heavy, which suits one file; the service layer is provider-agnostic should a server database ever be needed |

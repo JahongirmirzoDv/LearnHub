@@ -200,7 +200,7 @@ dotnet ef migrations script --project src/LearnHub --output schema.sql
 ```
 
 The `EF Core migration (cloud)` GitHub workflow (`.github/workflows/ef-migrations.yml`) can add a migration from the
-browser for team members without the SDK installed.
+browser, without the SDK installed.
 
 `src/LearnHub/Data/DesignTimeDbContextFactory.cs` supplies the context to the `dotnet ef` tools so migrations can be
 created without starting the web application.
