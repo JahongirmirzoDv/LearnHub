@@ -12,21 +12,34 @@ public static class ApplicationBuilderExtensions
     /// <summary>
     /// Railway (like any managed host) terminates TLS at its edge proxy and forwards plain HTTP, describing the
     /// original request in <c>X-Forwarded-Proto</c> and <c>X-Forwarded-For</c>. ASP.NET Core does not read those
-    /// headers on its own, so without this the app would treat every request as insecure and
-    /// <c>UseHttpsRedirection</c> would redirect to itself forever.
+    /// headers on its own, so without this the app would treat every request as insecure: HSTS would never be sent,
+    /// the antiforgery cookie is Secure-only in Production so every form page would fail, and
+    /// <c>UseHttpsRedirection</c> would keep trying to redirect.
     /// </summary>
     /// <remarks>
-    /// The platform proxy is the only route into the container, so its headers are trusted wholesale: the default
-    /// loopback-only allow-list would reject them, because the proxy arrives from a private-network address. This
-    /// must run before anything that inspects the scheme, the client address or the generated links.
+    /// The allow-list must be emptied deliberately. <c>ForwardedHeadersOptions</c> starts out trusting loopback
+    /// only, and inside a container the proxy arrives from the Docker bridge gateway rather than from 127.0.0.1,
+    /// so a loopback-only list silently ignores the headers. Note that a collection initializer such as
+    /// <c>KnownIPNetworks = { }</c> merely adds nothing — it does not clear the defaults — hence the explicit
+    /// <c>Clear()</c> calls below.
+    /// <para>
+    /// Trusting every proxy is safe only while the platform proxy is the sole route into the container, which is
+    /// the case on Railway. This must run before anything that inspects the scheme, the client address or the
+    /// generated links.
+    /// </para>
     /// </remarks>
-    public static IApplicationBuilder UsePlatformProxyHeaders(this IApplicationBuilder app) =>
-        app.UseForwardedHeaders(new ForwardedHeadersOptions
+    public static IApplicationBuilder UsePlatformProxyHeaders(this IApplicationBuilder app)
+    {
+        var options = new ForwardedHeadersOptions
         {
-            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-            KnownIPNetworks = { },
-            KnownProxies = { }
-        });
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+        };
+
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+
+        return app.UseForwardedHeaders(options);
+    }
 
     /// <summary>
     /// Serves <c>wwwroot</c> plus uploaded course thumbnails. Uploaded learning-resource files are deliberately
