@@ -136,17 +136,36 @@ jobs:
       # SQLite file and the Data Protection key ring are genuinely persistent on Railway.
       - name: Restart and confirm the data survived
         run: |
+          # Docker keeps the log across a restart, so remember where the first run ended and judge only the new lines.
+          before="$(docker logs learnhub 2>&1 | wc -l)"
+
           docker restart learnhub
           for attempt in $(seq 1 60); do
             if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then break; fi
             sleep 3
           done
-          docker logs learnhub > "$RUNNER_TEMP/learnhub-restart.log" 2>&1 || true
+
+          docker logs learnhub 2>&1 | tail -n "+$((before + 1))" > "$RUNNER_TEMP/learnhub-restart.log" || true
+          echo "--- log produced by the restart ---"
+          cat "$RUNNER_TEMP/learnhub-restart.log"
+
+          status=0
           if grep -q "Applying migration" "$RUNNER_TEMP/learnhub-restart.log"; then
             echo "::error::Migrations ran again after a restart, so the database did not persist."
-            exit 1
+            status=1
           fi
-          echo "The database survived the restart; migrations were not re-applied."
+          if grep -q "Demo data seeded" "$RUNNER_TEMP/learnhub-restart.log"; then
+            echo "::error::The catalogue was seeded again after a restart, so the database did not persist."
+            status=1
+          fi
+          if grep -Eq "^(fail|crit):" "$RUNNER_TEMP/learnhub-restart.log"; then
+            echo "::error::The application logged errors after the restart."
+            status=1
+          fi
+          if [ "$status" = "0" ]; then
+            echo "The database survived the restart: no migration and no seeding ran a second time."
+          fi
+          exit "$status"
 
       - name: Upload container log
         if: always()
