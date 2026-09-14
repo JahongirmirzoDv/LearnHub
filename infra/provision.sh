@@ -269,6 +269,8 @@ settings = {
     "ASPNETCORE_FORWARDEDHEADERS_ENABLED": "true",
     # Outside wwwroot, so deployments never remove uploaded files.
     "Storage__RootPath": "/home/data/learnhub/storage",
+    # The first start migrates and seeds before listening; give a cold free-tier instance time to finish.
+    "WEBSITES_CONTAINER_START_TIME_LIMIT": "600",
     "Seed__DemoData": "true",
     "Seed__AdminEmail": admin_email,
     "Seed__AdminPassword": os.environ["ADMIN_PASSWORD"],

@@ -89,6 +89,22 @@ What the script does, in order:
 
 Re-running the script is safe: existing resources are reused and settings are applied again.
 
+### Alternative: provision from GitHub Actions
+
+Without Cloud Shell, run **Actions → Provision Azure → Run workflow** (inputs: region, plan tier, SQL tier). The runner
+installs `sqlcmd`, starts an Azure device sign-in and uploads the code as the short-lived `device-code` artifact. Open the
+URL it contains (for example `https://login.microsoft.com/device`), enter the code and sign in with the subscription
+owner's account within 14 minutes. The workflow then runs the same script with `QUIET_IDS=true`:
+
+- identifiers stay out of the public log and are uploaded as the `provision-outputs` artifact, which contains the five
+  repository variables;
+- the administrator and demo student passwords are generated on the runner and written straight into the App Service
+  settings (`Seed__AdminPassword`, `Seed__DemoStudentPassword`). Read them in the Azure portal under the web app's
+  **Settings → Environment variables**, and remove them after the first sign-in.
+
+The script also registers the required resource providers, respects "allowed locations" policies (common on student
+subscriptions) and tries the next region when App Service or Azure SQL has no capacity for the subscription.
+
 ## 3. Connect GitHub to Azure
 
 Add the five variables printed by the script under **Settings → Secrets and variables → Actions → Variables**. None of

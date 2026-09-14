@@ -26,21 +26,35 @@ public sealed class DemoDataSeeder(
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
-        if (await db.Categories.AnyAsync(cancellationToken))
+        (int Courses, int Learners)? seeded = null;
+
+        // One transaction for everything: if the first start is interrupted (for example a slow cold start on a free
+        // hosting tier), no partial catalogue is left behind that would stop the next start from seeding. The
+        // execution strategy may retry the whole block, so each attempt starts from a clean change tracker.
+        await db.InTransactionAsync(async () =>
         {
-            return;
+            db.ChangeTracker.Clear();
+            seeded = null;
+            if (await db.Categories.AnyAsync(cancellationToken))
+            {
+                return;
+            }
+
+            var now = clock.GetUtcNow().UtcDateTime;
+            logger.LogInformation("Seeding demonstration catalogue and learners.");
+
+            var courses = await SeedCatalogueAsync(now, cancellationToken);
+            var learners = await SeedLearnersAsync(now);
+            await SeedActivityAsync(courses, learners, now, cancellationToken);
+            SeedContactMessages(now);
+            await db.SaveChangesAsync(cancellationToken);
+            seeded = (courses.Count, learners.Count);
+        }, cancellationToken);
+
+        if (seeded is { } counts)
+        {
+            logger.LogInformation("Demo data seeded: {CourseCount} courses, {LearnerCount} learners.", counts.Courses, counts.Learners);
         }
-
-        var now = clock.GetUtcNow().UtcDateTime;
-        logger.LogInformation("Seeding demonstration catalogue and learners.");
-
-        var courses = await SeedCatalogueAsync(now, cancellationToken);
-        var learners = await SeedLearnersAsync(now);
-        await SeedActivityAsync(courses, learners, now, cancellationToken);
-        SeedContactMessages(now);
-        await db.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("Demo data seeded: {CourseCount} courses, {LearnerCount} learners.", courses.Count, learners.Count);
     }
 
     private async Task<List<Course>> SeedCatalogueAsync(DateTime now, CancellationToken cancellationToken)
