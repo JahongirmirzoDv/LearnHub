@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using LearnHub.Infrastructure;
 using LearnHub.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace LearnHub.ViewModels.Account;
 
@@ -72,16 +74,30 @@ public sealed class ProfileViewModel
     [Display(Name = "Full name")]
     public string FullName { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Please enter your email address.")]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+    [StringLength(FieldLengths.Email, ErrorMessage = "Email address can be at most {1} characters.")]
+    [Display(Name = "Email address")]
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>Only needed when the email address changes, because the email address is also the sign-in name.</summary>
+    [DataType(DataType.Password)]
+    [StringLength(PasswordRules.MaximumLength)]
+    [Display(Name = "Current password")]
+    public string? CurrentPassword { get; set; }
+
     [StringLength(FieldLengths.Bio, ErrorMessage = "Bio can be at most {1} characters.")]
     [DataType(DataType.MultilineText)]
     [Display(Name = "About me")]
     public string? Bio { get; set; }
 
-    // Display-only values; never bound back from the form.
-    public string Email { get; set; } = string.Empty;
-
+    // Display-only values: never bound from the form, so a user cannot post a new role for themselves.
+    [BindNever]
+    [ValidateNever]
     public DateTime MemberSince { get; set; }
 
+    [BindNever]
+    [ValidateNever]
     public IReadOnlyList<string> Roles { get; set; } = [];
 }
 

@@ -34,19 +34,15 @@
 
             <nav class="admin-nav" aria-label="Admin sections">
                 <a lh-nav="Admin/Dashboard" asp-area="Admin" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-speedometer2" aria-hidden="true"></i>Dashboard</a>
-
-                <p class="admin-nav-group">Catalogue</p>
+                <a lh-nav="Admin/Users" asp-area="Admin" asp-controller="Users" asp-action="Index"><i class="bi bi-people" aria-hidden="true"></i>Users</a>
                 <a lh-nav="Admin/Courses" asp-area="Admin" asp-controller="Courses" asp-action="Index"><i class="bi bi-journal-richtext" aria-hidden="true"></i>Courses</a>
                 <a lh-nav="Admin/Categories" asp-area="Admin" asp-controller="Categories" asp-action="Index"><i class="bi bi-diagram-3" aria-hidden="true"></i>Categories</a>
                 <a lh-nav="Admin/Resources" asp-area="Admin" asp-controller="Resources" asp-action="Index"><i class="bi bi-collection-play" aria-hidden="true"></i>Resources</a>
-
-                <p class="admin-nav-group">Assessment</p>
                 <a lh-nav="Admin/Quizzes,Admin/Questions" asp-area="Admin" asp-controller="Quizzes" asp-action="Index"><i class="bi bi-patch-question" aria-hidden="true"></i>Quizzes</a>
-                <a lh-nav="Admin/QuizAttempts" asp-area="Admin" asp-controller="QuizAttempts" asp-action="Index"><i class="bi bi-clipboard-data" aria-hidden="true"></i>Quiz results</a>
-
-                <p class="admin-nav-group">People</p>
-                <a lh-nav="Admin/Users" asp-area="Admin" asp-controller="Users" asp-action="Index"><i class="bi bi-people" aria-hidden="true"></i>Users</a>
                 <a lh-nav="Admin/Enrollments" asp-area="Admin" asp-controller="Enrollments" asp-action="Index"><i class="bi bi-person-check" aria-hidden="true"></i>Enrolments</a>
+
+                <p class="admin-nav-group">More</p>
+                <a lh-nav="Admin/QuizAttempts" asp-area="Admin" asp-controller="QuizAttempts" asp-action="Index"><i class="bi bi-clipboard-data" aria-hidden="true"></i>Quiz results</a>
                 <a lh-nav="Admin/Messages" asp-area="Admin" asp-controller="Messages" asp-action="Index">
                     <i class="bi bi-envelope" aria-hidden="true"></i>Messages
                     @if (unreadMessages > 0)
@@ -54,8 +50,6 @@
                         <span class="nav-count">@unreadMessages<span class="visually-hidden"> unread</span></span>
                     }
                 </a>
-
-                <p class="admin-nav-group">Website</p>
                 <a asp-area="" asp-controller="Home" asp-action="Index"><i class="bi bi-house" aria-hidden="true"></i>Main website</a>
                 <form method="post" asp-area="" asp-controller="Account" asp-action="Logout">
                     <button type="submit" class="admin-nav-button"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Log out</button>

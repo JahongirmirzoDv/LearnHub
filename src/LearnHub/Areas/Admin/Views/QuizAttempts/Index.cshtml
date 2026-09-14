@@ -69,9 +69,10 @@ else
                         </td>
                         <td class="num" data-label="Score">
                             <span class="score-pill @(attempt.Passed ? "is-passed" : null)">@attempt.ScorePercent%</span>
+                            <span class="cell-sub">@attempt.Score / @attempt.MaxScore points</span>
                             <span class="visually-hidden">@(attempt.Passed ? "passed" : "not passed")</span>
                         </td>
-                        <td data-label="Submitted"><time data-local="datetime" datetime="@DisplayFormat.IsoDate(attempt.SubmittedAt)">@DisplayFormat.DateAndTime(attempt.SubmittedAt)</time></td>
+                        <td data-label="Submitted"><time data-local="datetime" datetime="@DisplayFormat.IsoDate(attempt.CompletedAt)">@DisplayFormat.DateAndTime(attempt.CompletedAt)</time></td>
                         <td class="cell-actions">
                             <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@attempt.Id">Review<span class="visually-hidden"> attempt by @attempt.StudentName</span></a>
                             <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@attempt.Id">Delete<span class="visually-hidden"> attempt by @attempt.StudentName</span></a>

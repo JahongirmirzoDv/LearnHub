@@ -2171,6 +2171,12 @@ a.route-title:hover {
     white-space: nowrap;
 }
 
+.table-lh .num {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
 /* position: relative makes the wrapper the containing block of absolutely positioned descendants (such as
    .visually-hidden header text), so they are clipped with the table instead of widening the whole page. */
 .table-wrap {
@@ -2387,6 +2393,360 @@ a.route-title:hover {
 }
 
 /* ---------- Reduced motion and print ---------- */
+/* ---------- Home: actions, category tiles, benefits, lesson formats, sample question ---------- */
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+}
+
+.category-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+    gap: 0.75rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.category-tile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 0.75rem;
+    align-items: center;
+    height: 100%;
+    padding: 0.85rem 1rem;
+    background: var(--lh-surface);
+    border: 1px solid var(--lh-rail);
+    border-left: 6px solid var(--line);
+    border-radius: var(--lh-radius-md);
+    color: var(--lh-ink);
+    text-decoration: none;
+}
+
+.category-tile:hover {
+    border-color: var(--line);
+    color: var(--lh-ink);
+}
+
+.category-tile .line-dot,
+.category-card .line-dot {
+    display: inline-grid;
+    grid-row: span 2;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: var(--line);
+    color: #fff;
+}
+
+.category-tile-name {
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.category-tile-count {
+    color: var(--lh-muted);
+    font-size: var(--lh-fs-sm);
+}
+
+.benefit-grid {
+    display: grid;
+    gap: 1.25rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+@media (min-width: 768px) {
+    .benefit-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .benefit-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.benefit-grid h3 {
+    font-size: var(--lh-fs-md);
+    margin: 0.75rem 0 0.35rem;
+}
+
+.benefit-grid p {
+    margin: 0;
+    color: var(--lh-muted);
+}
+
+.benefit-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: var(--lh-radius-sm);
+    background: var(--lh-signal-soft);
+    border: 2px solid var(--lh-ink);
+    font-size: 1.2rem;
+}
+
+.formats-layout {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+}
+
+@media (min-width: 992px) {
+    .formats-layout {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 3rem;
+    }
+}
+
+.format-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0;
+    margin: 1.25rem 0 0;
+    list-style: none;
+}
+
+.format-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--lh-surface);
+    border: 1px solid var(--lh-rail);
+    border-radius: var(--lh-radius-sm);
+}
+
+.format-icon {
+    font-size: 1.15rem;
+}
+
+.format-name {
+    flex: 1;
+    font-weight: 700;
+    min-width: 0;
+}
+
+.format-count {
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.sample-fieldset legend {
+    float: none;
+    width: 100%;
+    font-size: var(--lh-fs-md);
+    font-weight: 800;
+    line-height: 1.4;
+    margin-bottom: 0.75rem;
+}
+
+.quiz-option.is-correct label {
+    border-color: var(--lh-go);
+    background: var(--lh-go-soft);
+    box-shadow: inset 0 0 0 1px var(--lh-go);
+}
+
+.quiz-option.is-wrong label {
+    border-color: var(--lh-stop);
+    background: var(--lh-stop-soft);
+    box-shadow: inset 0 0 0 1px var(--lh-stop);
+}
+
+.sample-feedback {
+    font-weight: 800;
+    min-height: 1.6em;
+}
+
+.sample-feedback.is-correct {
+    color: var(--lh-go);
+}
+
+.sample-feedback.is-wrong {
+    color: var(--lh-stop);
+}
+
+/* ---------- Categories page ---------- */
+.category-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+    gap: 1.25rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.category-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    background: var(--lh-surface);
+    border: 1px solid var(--lh-rail);
+    border-top: 6px solid var(--line);
+    border-radius: var(--lh-radius-md);
+}
+
+.category-card p {
+    margin: 0;
+}
+
+.category-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.category-card-courses {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    font-weight: 600;
+}
+
+.category-card-courses li {
+    position: relative;
+    padding-left: 1.25rem;
+}
+
+.category-card-courses li::before {
+    content: "";
+    position: absolute;
+    top: 0.55em;
+    left: 0;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    border: 3px solid var(--line);
+}
+
+.category-card-empty {
+    color: var(--lh-muted);
+    font-style: italic;
+}
+
+/* ---------- Search results: lessons that matched ---------- */
+.matching-lessons {
+    margin: 0 0 0.75rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--lh-signal-soft);
+    border-radius: var(--lh-radius-sm);
+    font-size: var(--lh-fs-sm);
+}
+
+.matching-lessons-title {
+    margin: 0 0 0.25rem;
+    font-weight: 800;
+}
+
+.matching-lessons ul {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.matching-lessons .bi {
+    margin-right: 0.35rem;
+    color: var(--lh-muted);
+}
+
+/* ---------- Exercise solution ---------- */
+.solution-panel {
+    margin-top: 2rem;
+    padding: 1rem 1.25rem;
+    background: var(--lh-paper);
+    border: 1px solid var(--lh-rail);
+    border-left: 6px solid var(--lh-signal);
+    border-radius: var(--lh-radius-md);
+}
+
+.solution-panel summary {
+    display: grid;
+    gap: 0.15rem;
+    cursor: pointer;
+}
+
+.solution-panel summary::marker {
+    color: var(--lh-ink);
+}
+
+.solution-summary-title {
+    font-weight: 800;
+}
+
+.solution-panel[open] .solution-summary-title::after {
+    content: " (shown)";
+    font-weight: 600;
+    color: var(--lh-muted);
+}
+
+/* ---------- Student progress page ---------- */
+.progress-course-list {
+    display: grid;
+    gap: 1rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.progress-course {
+    border-left: 6px solid var(--line);
+}
+
+.progress-course-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.progress-course-parts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 2rem;
+    margin-top: 0.75rem;
+}
+
+.progress-course-parts .bi {
+    margin-right: 0.25rem;
+}
+
+.progress-quiz-list {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem 0 0;
+    margin: 0.75rem 0 0;
+    border-top: 1px solid var(--lh-rail);
+    list-style: none;
+}
+
+.progress-quiz-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+}
+
+.progress-quiz-list li > span:first-child {
+    font-weight: 700;
+    margin-right: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

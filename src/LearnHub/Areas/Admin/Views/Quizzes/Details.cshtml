@@ -40,8 +40,9 @@
     </div>
 </div>
 
-<dl class="stat-strip quiz-stats">
+<dl class="stat-strip">
     <div><dt>Questions</dt><dd>@Model.Questions.Count</dd></div>
+    <div><dt>Total points</dt><dd>@Model.TotalPoints</dd></div>
     <div><dt>Pass mark</dt><dd>@Model.PassMarkPercent%</dd></div>
     <div><dt>Attempts</dt><dd><a class="text-reset" asp-controller="QuizAttempts" asp-action="Index" asp-route-quizId="@Model.Id">@Model.AttemptCount</a></dd></div>
     <div><dt>Average score</dt><dd>@(Model.AverageScorePercent is int average ? $"{average}%" : "–")</dd></div>
@@ -65,7 +66,7 @@ else
             <li class="question-item">
                 <header>
                     <div>
-                        <p class="text-muted-lh small mb-1">Order @question.SortOrder, answered in @DisplayFormat.Plural(question.AnswerCount, "attempt")</p>
+                        <p class="text-muted-lh small mb-1">Order @question.SortOrder, worth @DisplayFormat.Plural(question.Points, "point"), answered in @DisplayFormat.Plural(question.AnswerCount, "attempt")</p>
                         <h3>@question.Text</h3>
                     </div>
                     <div class="d-flex gap-2">

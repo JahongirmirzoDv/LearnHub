@@ -25,6 +25,10 @@ public static class DisplayFormat
         return rest == 0 ? $"{hours} h" : $"{hours} h {rest} min";
     }
 
+    /// <summary>Time spent on a quiz attempt, e.g. "under a minute", "7 min" or "1 h 5 min".</summary>
+    public static string TimeTaken(TimeSpan duration) =>
+        duration.TotalMinutes < 1 ? "under a minute" : Duration((int)Math.Round(duration.TotalMinutes));
+
     public static string FileSize(long bytes) => bytes switch
     {
         >= 1024 * 1024 => (bytes / (1024d * 1024d)).ToString("0.#", Culture) + " MB",
@@ -69,6 +73,7 @@ public static class DisplayFormat
         ResourceType.Pdf => "bi-file-earmark-pdf",
         ResourceType.Image => "bi-image",
         ResourceType.Link => "bi-box-arrow-up-right",
+        ResourceType.Exercise => "bi-pencil-square",
         _ => "bi-file-earmark"
     };
 

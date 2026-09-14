@@ -1,4 +1,5 @@
 using LearnHub.Services.Storage;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.FileProviders;
 
 namespace LearnHub.Infrastructure;
@@ -7,6 +8,25 @@ public static class ApplicationBuilderExtensions
 {
     public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app) =>
         app.UseMiddleware<SecurityHeadersMiddleware>();
+
+    /// <summary>
+    /// Railway (like any managed host) terminates TLS at its edge proxy and forwards plain HTTP, describing the
+    /// original request in <c>X-Forwarded-Proto</c> and <c>X-Forwarded-For</c>. ASP.NET Core does not read those
+    /// headers on its own, so without this the app would treat every request as insecure and
+    /// <c>UseHttpsRedirection</c> would redirect to itself forever.
+    /// </summary>
+    /// <remarks>
+    /// The platform proxy is the only route into the container, so its headers are trusted wholesale: the default
+    /// loopback-only allow-list would reject them, because the proxy arrives from a private-network address. This
+    /// must run before anything that inspects the scheme, the client address or the generated links.
+    /// </remarks>
+    public static IApplicationBuilder UsePlatformProxyHeaders(this IApplicationBuilder app) =>
+        app.UseForwardedHeaders(new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+            KnownIPNetworks = { },
+            KnownProxies = { }
+        });
 
     /// <summary>
     /// Serves <c>wwwroot</c> plus uploaded course thumbnails. Uploaded learning-resource files are deliberately

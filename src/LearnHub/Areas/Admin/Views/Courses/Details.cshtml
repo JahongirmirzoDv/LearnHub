@@ -109,6 +109,10 @@
                                         <span class="cell-sub"><i class="bi @DisplayFormat.ResourceIcon(resource.Type) me-1" aria-hidden="true"></i>@DisplayFormat.ResourceTypeName(resource.Type)</span>
                                     </td>
                                     <td data-label="Access">
+                                        @if (!resource.IsPublished)
+                                        {
+                                            <span class="badge-state badge-state--draft">Draft</span>
+                                        }
                                         @if (resource.IsPreview)
                                         {
                                             <span class="badge-state badge-state--info">Free preview</span>

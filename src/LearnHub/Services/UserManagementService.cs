@@ -32,7 +32,6 @@ public interface IUserManagementService
 public sealed class UserManagementService(
     ApplicationDbContext db,
     UserManager<ApplicationUser> userManager,
-    IProgressService progress,
     ILogger<UserManagementService> logger) : IUserManagementService
 {
     public const int PageSize = 20;
@@ -106,15 +105,14 @@ public sealed class UserManagementService(
         var enrollments = await db.Enrollments.AsNoTracking()
             .Where(e => e.UserId == id)
             .OrderByDescending(e => e.EnrolledAt)
-            .Select(e => new { e.Id, e.CourseId, e.Course.Title, e.EnrolledAt })
+            .Select(e => new AdminUserEnrollmentItem(e.Id, e.CourseId, e.Course.Title, e.EnrolledAt, e.CompletionPercentage, e.CompletedAt))
             .ToListAsync(cancellationToken);
-        var progressByCourse = await progress.GetForCoursesAsync(id, enrollments.Select(e => e.CourseId).ToList(), cancellationToken);
 
         var attempts = await db.QuizAttempts.AsNoTracking()
             .Where(a => a.UserId == id)
-            .OrderByDescending(a => a.SubmittedAt)
+            .OrderByDescending(a => a.CompletedAt)
             .Take(10)
-            .Select(a => new QuizAttemptSummary(a.Id, a.QuizId, a.Quiz.Title, a.Quiz.CourseId, a.Quiz.Course.Title, a.SubmittedAt, a.ScorePercent, a.Passed))
+            .Select(a => new QuizAttemptSummary(a.Id, a.QuizId, a.Quiz.Title, a.Quiz.CourseId, a.Quiz.Course.Title, a.CompletedAt, a.ScorePercent, a.Passed))
             .ToListAsync(cancellationToken);
 
         return new AdminUserDetailsViewModel
@@ -130,9 +128,7 @@ public sealed class UserManagementService(
             LockoutEnd = user.LockoutEnd,
             IsCurrentUser = user.Id == currentUserId,
             CompletedResourceCount = await db.ResourceCompletions.CountAsync(c => c.UserId == id, cancellationToken),
-            Enrollments = enrollments
-                .Select(e => new AdminUserEnrollmentItem(e.Id, e.CourseId, e.Title, e.EnrolledAt, progressByCourse.GetValueOrDefault(e.CourseId, CourseProgress.Empty).Percent))
-                .ToList(),
+            Enrollments = enrollments,
             RecentAttempts = attempts
         };
     }

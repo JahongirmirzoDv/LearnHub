@@ -81,6 +81,10 @@ else
                         <td data-label="Course"><a asp-controller="Courses" asp-action="Details" asp-route-id="@resource.CourseId">@resource.CourseTitle</a></td>
                         <td class="num" data-label="Order">@resource.SortOrder</td>
                         <td data-label="Access">
+                            @if (!resource.IsPublished)
+                            {
+                                <span class="badge-state badge-state--draft">Draft</span>
+                            }
                             @if (resource.IsPreview)
                             {
                                 <span class="badge-state badge-state--info">Free preview</span>

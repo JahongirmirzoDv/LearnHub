@@ -396,8 +396,19 @@
         grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
-    .stat-strip.quiz-stats {
+    .stat-strip.quiz-stats,
+    .stat-strip.stat-strip-4 {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .stat-strip.stat-strip-6 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1400px) {
+    .stat-strip.stat-strip-6 {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 }
 

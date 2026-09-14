@@ -1,6 +1,8 @@
 @model HomeViewModel
 @{
-    ViewData["Description"] = "Free online courses in programming, web development, databases, cybersecurity, networking and cloud computing, with lessons, quizzes and progress tracking.";
+    ViewData["Description"] = "Free online courses in programming, web development, databases, cybersecurity, networking, software engineering and mathematics, with lessons, exercises, quizzes and progress tracking.";
+    var formatOrder = new[] { ResourceType.Article, ResourceType.Video, ResourceType.Pdf, ResourceType.Image, ResourceType.Exercise, ResourceType.Link };
+    var formatCounts = Model.LessonFormats.ToDictionary(f => f.Type, f => f.Count);
 }
 
 @section Hero {
@@ -9,15 +11,33 @@
             <div>
                 <h1 class="hero-title" id="hero-title">Build real computing skills, one lesson at a time.</h1>
                 <p class="hero-lead">
-                    LearnHub brings together courses in programming, web development, databases, security, networking and the cloud.
-                    Enrol for free, work through every lesson and quiz, and always see how far you have come.
+                    LearnHub is a web-based learning system with courses in programming, web development, databases, security,
+                    networking, software engineering and mathematics. Browse freely as a guest, then register to enrol, take quizzes
+                    and track your progress.
                 </p>
+
+                <div class="hero-actions">
+                    <a class="btn btn-signal btn-lg" asp-controller="Courses" asp-action="Index">Explore courses</a>
+                    @if (User.IsStudent())
+                    {
+                        <a class="btn btn-outline-primary btn-lg" asp-controller="Student" asp-action="Dashboard">My learning</a>
+                    }
+                    else if (User.IsAdmin())
+                    {
+                        <a class="btn btn-outline-primary btn-lg" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">Admin dashboard</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-primary btn-lg" asp-controller="Account" asp-action="Register">Register</a>
+                        <a class="btn btn-outline-primary btn-lg" asp-controller="Account" asp-action="Login">Log in</a>
+                    }
+                </div>
 
                 <form class="hero-search" role="search" method="get" asp-controller="Courses" asp-action="Index">
                     <i class="bi bi-search" aria-hidden="true"></i>
-                    <label for="hero-search" class="visually-hidden">Search courses</label>
+                    <label for="hero-search" class="visually-hidden">Search courses and lessons</label>
                     <input id="hero-search" name="q" type="search" class="form-control" maxlength="100" autocomplete="off"
-                           placeholder="Search for SQL, security, ASP.NET…" />
+                           placeholder="Search for SQL, binary, ASP.NET…" />
                     <button type="submit" class="btn btn-primary">Search</button>
                 </form>
 
@@ -25,19 +45,6 @@
                     @DisplayFormat.Plural(Model.PublishedCourseCount, "course"), @DisplayFormat.Plural(Model.ResourceCount, "lesson")
                     and @DisplayFormat.Plural(Model.QuizCount, "quiz", "quizzes"), used by @DisplayFormat.Plural(Model.LearnerCount, "registered student").
                 </p>
-
-                <ul class="line-list mt-4 d-lg-none" aria-label="Browse by category">
-                    @foreach (var category in Model.Categories)
-                    {
-                        <li>
-                            <a class="line-chip @DisplayFormat.LineClass(category.Id)" asp-controller="Courses" asp-action="Index" asp-route-categoryId="@category.Id">
-                                <span class="line-dot" aria-hidden="true"><i class="@("bi bi-" + category.IconName)"></i></span>
-                                @category.Name
-                                <span class="line-count">@category.CourseCount</span>
-                            </a>
-                        </li>
-                    }
-                </ul>
             </div>
 
             <div class="d-none d-lg-block">
@@ -47,11 +54,11 @@
     </section>
 }
 
-<section class="section" aria-labelledby="popular-title">
+<section class="section" aria-labelledby="featured-title">
     <div class="container">
         <div class="section-heading">
             <div>
-                <h2 id="popular-title">Popular courses</h2>
+                <h2 id="featured-title">Featured courses</h2>
                 <p>The courses students enrol in most often.</p>
             </div>
             <a class="btn btn-outline-primary" asp-controller="Courses" asp-action="Index">Browse all courses</a>
@@ -77,6 +84,118 @@
     </div>
 </section>
 
+<section class="section pt-0" aria-labelledby="categories-title">
+    <div class="container">
+        <div class="section-heading">
+            <div>
+                <h2 id="categories-title">Browse by category</h2>
+                <p>Every category is a line on the map. Pick one to see its courses.</p>
+            </div>
+            <a class="btn btn-outline-primary" asp-controller="Categories" asp-action="Index">All categories</a>
+        </div>
+
+        @if (Model.Categories.Count == 0)
+        {
+            <p class="text-muted-lh">No categories have been created yet.</p>
+        }
+        else
+        {
+            <ul class="category-tiles">
+                @foreach (var category in Model.Categories)
+                {
+                    <li>
+                        <a class="category-tile @DisplayFormat.LineClass(category.Id)" asp-controller="Courses" asp-action="Index" asp-route-categoryId="@category.Id">
+                            <span class="line-dot" aria-hidden="true"><i class="@("bi bi-" + category.IconName)"></i></span>
+                            <span class="category-tile-name">@category.Name</span>
+                            <span class="category-tile-count">@DisplayFormat.Plural(category.CourseCount, "course")</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</section>
+
+<section class="section pt-0" aria-labelledby="benefits-title">
+    <div class="container">
+        <h2 id="benefits-title" class="mb-4">Why learn with LearnHub</h2>
+        <ul class="benefit-grid">
+            <li>
+                <span class="benefit-icon" aria-hidden="true"><i class="bi bi-signpost-split"></i></span>
+                <h3>Structured routes</h3>
+                <p>Each course is an ordered route of lessons, so you always know what comes next.</p>
+            </li>
+            <li>
+                <span class="benefit-icon" aria-hidden="true"><i class="bi bi-collection-play"></i></span>
+                <h3>Learn in the format that suits you</h3>
+                <p>Articles, videos, PDF references, diagrams, links to official documentation and hands-on exercises.</p>
+            </li>
+            <li>
+                <span class="benefit-icon" aria-hidden="true"><i class="bi bi-patch-check"></i></span>
+                <h3>Instant quiz feedback</h3>
+                <p>Quizzes are marked on the server straight away, with an explanation for every question.</p>
+            </li>
+            <li>
+                <span class="benefit-icon" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></span>
+                <h3>Honest progress tracking</h3>
+                <p>Progress bars count the lessons you finish and the quizzes you pass, nothing else.</p>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<section class="section pt-0" aria-labelledby="formats-title">
+    <div class="container">
+        <div class="formats-layout">
+            <div>
+                <h2 id="formats-title">Every kind of lesson in one place</h2>
+                <p class="text-muted-lh">The lessons published on LearnHub right now, by format.</p>
+                <ul class="format-list">
+                    @foreach (var type in formatOrder)
+                    {
+                        <li>
+                            <span class="format-icon" aria-hidden="true"><i class="@("bi " + DisplayFormat.ResourceIcon(type))"></i></span>
+                            <span class="format-name">@DisplayFormat.ResourceTypeName(type)</span>
+                            <span class="format-count">@formatCounts.GetValueOrDefault(type)</span>
+                        </li>
+                    }
+                </ul>
+                @if (Model.PreviewLesson is { } preview)
+                {
+                    <p class="mt-3 mb-0">
+                        <a class="btn btn-outline-primary" asp-controller="Resources" asp-action="Details" asp-route-id="@preview.ResourceId">
+                            Open a free preview lesson<span class="visually-hidden">: @preview.Title (@preview.CourseTitle)</span>
+                        </a>
+                    </p>
+                }
+            </div>
+
+            <div class="sample-question panel" data-sample-question>
+                <h3 class="panel-title">Try a quiz question</h3>
+                <p class="text-muted-lh small">A sample from the Web Development courses. It is not saved or graded.</p>
+                <fieldset class="sample-fieldset">
+                    <legend>Which HTML element should wrap a website's main navigation links?</legend>
+                    <div class="quiz-options">
+                        @foreach (var (value, isCorrect) in new[] { ("div", false), ("nav", true), ("section", false), ("span", false) })
+                        {
+                            <div class="quiz-option">
+                                <input type="radio" id="@("sample-" + value)" name="sample-answer" value="@value" data-correct="@(isCorrect ? "true" : null)" />
+                                <label for="@("sample-" + value)"><code>&lt;@value&gt;</code></label>
+                            </div>
+                        }
+                    </div>
+                </fieldset>
+                <button type="button" class="btn btn-primary mt-3" data-sample-check>Check answer</button>
+                <p class="sample-feedback mt-3 mb-0" data-sample-feedback aria-live="polite"></p>
+                <p class="sample-explanation mt-2 mb-0" data-sample-explanation hidden>
+                    <code>&lt;nav&gt;</code> tells browsers and screen readers that the links are the main navigation, so assistive
+                    technology can jump straight to them. Real quizzes explain every answer like this after you submit.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <section class="section pt-0" aria-labelledby="how-title">
     <div class="container">
         <h2 id="how-title" class="mb-4">How learning works on LearnHub</h2>
@@ -91,11 +210,11 @@
             </li>
             <li>
                 <h3>Work through each lesson</h3>
-                <p>Read articles, watch videos, open PDF references and mark each lesson complete when you finish it.</p>
+                <p>Read articles, watch videos, try exercises and mark each lesson complete when you finish it.</p>
             </li>
             <li>
                 <h3>Check your understanding</h3>
-                <p>Take the course quiz, review the explanations for each answer and follow your progress on your dashboard.</p>
+                <p>Take the course quiz, review the explanations for each answer and follow your progress bars.</p>
             </li>
         </ol>
     </div>
@@ -108,9 +227,9 @@
             {
                 <div>
                     <h2 id="cta-title">Pick up where you left off</h2>
-                    <p>Your dashboard shows the next lesson in each course you are taking.</p>
+                    <p>My learning shows the next lesson in each course you are taking.</p>
                 </div>
-                <a class="btn btn-signal btn-lg" asp-controller="Student" asp-action="Dashboard">Go to my dashboard</a>
+                <a class="btn btn-signal btn-lg" asp-controller="Student" asp-action="Dashboard">Go to my learning</a>
             }
             else if (User.IsAdmin())
             {

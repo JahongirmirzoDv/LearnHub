@@ -1,0 +1,61 @@
+@model IReadOnlyList<CategoryCardViewModel>
+@{
+    ViewData["Title"] = "Categories";
+    ViewData["Description"] = "Browse LearnHub courses by category: programming, web development, databases, cybersecurity, networking, software engineering, mathematics and more.";
+}
+
+<section class="page-header">
+    <div class="container">
+        <h1>Categories</h1>
+        <p>Every category is one line on the LearnHub map. Choose a line to see its published courses.</p>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        @if (Model.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="bi bi-diagram-3"></i></span>
+                <h2>No categories yet</h2>
+                <p>Categories appear here once an administrator creates them.</p>
+                <a class="btn btn-primary" asp-controller="Courses" asp-action="Index">Browse all courses</a>
+            </div>
+        }
+        else
+        {
+            <ul class="category-card-grid">
+                @foreach (var category in Model)
+                {
+                    <li class="category-card @DisplayFormat.LineClass(category.Id)">
+                        <div class="category-card-head">
+                            <span class="line-dot" aria-hidden="true"><i class="@("bi bi-" + category.IconName)"></i></span>
+                            <h2 class="h4 mb-0">@category.Name</h2>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(category.Description))
+                        {
+                            <p class="text-muted-lh">@category.Description</p>
+                        }
+
+                        @if (category.CourseCount == 0)
+                        {
+                            <p class="category-card-empty">No published courses yet. Check back soon.</p>
+                        }
+                        else
+                        {
+                            <ul class="category-card-courses" aria-label="@($"Courses in {category.Name}")">
+                                @foreach (var title in category.ExampleCourseTitles)
+                                {
+                                    <li>@title</li>
+                                }
+                            </ul>
+                            <a class="btn btn-outline-primary mt-auto" asp-controller="Courses" asp-action="Index" asp-route-categoryId="@category.Id">
+                                View @DisplayFormat.Plural(category.CourseCount, "course")<span class="visually-hidden"> in @category.Name</span>
+                            </a>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

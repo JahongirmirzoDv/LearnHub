@@ -31,7 +31,7 @@
                 <ul class="meta-list mt-3">
                     <li><span class="@DisplayFormat.DifficultyBadgeClass(Model.Difficulty)">@Model.Difficulty</span></li>
                     <li><i class="bi bi-clock" aria-hidden="true"></i>@DisplayFormat.Duration(Model.DurationMinutes)</li>
-                    <li><i class="bi bi-signpost-split" aria-hidden="true"></i>@DisplayFormat.Plural(Model.Resources.Count, "lesson")</li>
+                    <li><i class="bi bi-signpost-split" aria-hidden="true"></i>@DisplayFormat.Plural(Model.Resources.Count(r => r.IsPublished), "lesson")</li>
                     <li><i class="bi bi-patch-question" aria-hidden="true"></i>@DisplayFormat.Plural(Model.Quizzes.Count, "quiz", "quizzes")</li>
                     <li><i class="bi bi-people" aria-hidden="true"></i>@DisplayFormat.Plural(Model.EnrollmentCount, "learner")</li>
                 </ul>
@@ -141,6 +141,10 @@
                                         @if (resource.IsPreview && !Model.CanAccessAllContent)
                                         {
                                             <span class="badge-state badge-state--info">Free preview</span>
+                                        }
+                                        @if (!resource.IsPublished)
+                                        {
+                                            <span class="badge-state badge-state--draft">Draft, visible to admins only</span>
                                         }
                                     </span>
                                 </div>

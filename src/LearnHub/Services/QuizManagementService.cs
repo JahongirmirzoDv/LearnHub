@@ -36,6 +36,7 @@ public interface IQuizManagementService
 public sealed class QuizManagementService(
     ApplicationDbContext db,
     ILookupService lookups,
+    IProgressService progress,
     ILogger<QuizManagementService> logger) : IQuizManagementService
 {
     public const int PageSize = 20;
@@ -92,6 +93,7 @@ public sealed class QuizManagementService(
                         question.SortOrder,
                         question.Text,
                         question.Explanation,
+                        question.Points,
                         db.QuizAnswers.Count(answer => answer.QuestionId == question.Id),
                         question.Options
                             .OrderBy(option => option.SortOrder).ThenBy(option => option.Id)
@@ -166,6 +168,7 @@ public sealed class QuizManagementService(
             return OperationResult.Failure("Add at least one question before publishing this quiz.");
         }
 
+        var previousCourseId = quiz.CourseId;
         quiz.CourseId = model.CourseId!.Value;
         quiz.Title = TextInput.Required(model.Title);
         quiz.Description = TextInput.Clean(model.Description);
@@ -173,6 +176,12 @@ public sealed class QuizManagementService(
         quiz.IsPublished = model.IsPublished;
 
         await db.SaveChangesAsync(cancellationToken);
+        await progress.SyncAsync(quiz.CourseId, cancellationToken: cancellationToken);
+        if (previousCourseId != quiz.CourseId)
+        {
+            await progress.SyncAsync(previousCourseId, cancellationToken: cancellationToken);
+        }
+
         logger.LogInformation("Quiz {QuizId} updated.", id);
         return OperationResult.Success();
     }
@@ -192,6 +201,7 @@ public sealed class QuizManagementService(
 
         quiz.IsPublished = isPublished;
         await db.SaveChangesAsync(cancellationToken);
+        await progress.SyncAsync(quiz.CourseId, cancellationToken: cancellationToken);
         logger.LogInformation("Quiz {QuizId} {State}.", id, isPublished ? "published" : "unpublished");
         return OperationResult.Success();
     }
@@ -217,6 +227,7 @@ public sealed class QuizManagementService(
             await db.Quizzes.Where(q => q.Id == id).ExecuteDeleteAsync(cancellationToken);
         }, cancellationToken);
 
+        await progress.SyncAsync(courseId.Value, cancellationToken: cancellationToken);
         logger.LogInformation("Quiz {QuizId} deleted.", id);
         return OperationResult<int>.Success(courseId.Value);
     }
@@ -239,9 +250,9 @@ public sealed class QuizManagementService(
         }
 
         var results = await attempts
-            .OrderByDescending(a => a.SubmittedAt)
+            .OrderByDescending(a => a.CompletedAt)
             .Select(a => new AdminAttemptListItem(
-                a.Id, a.User.FullName, a.User.Email ?? string.Empty, a.QuizId, a.Quiz.Title, a.Quiz.Course.Title, a.ScorePercent, a.Passed, a.SubmittedAt))
+                a.Id, a.User.FullName, a.User.Email ?? string.Empty, a.QuizId, a.Quiz.Title, a.Quiz.Course.Title, a.Score, a.MaxScore, a.ScorePercent, a.Passed, a.CompletedAt))
             .ToPagedResultAsync(query.Page, PageSize, cancellationToken);
 
         query.Page = results.Page;
@@ -256,12 +267,12 @@ public sealed class QuizManagementService(
     public async Task<AttemptDeleteViewModel?> GetAttemptForDeleteAsync(int id, CancellationToken cancellationToken = default) =>
         await db.QuizAttempts.AsNoTracking()
             .Where(a => a.Id == id)
-            .Select(a => new AttemptDeleteViewModel(a.Id, a.User.FullName, a.Quiz.Title, a.ScorePercent, a.SubmittedAt))
+            .Select(a => new AttemptDeleteViewModel(a.Id, a.User.FullName, a.Quiz.Title, a.ScorePercent, a.CompletedAt))
             .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<OperationResult> DeleteAttemptAsync(int id, CancellationToken cancellationToken = default)
     {
-        var attempt = await db.QuizAttempts.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+        var attempt = await db.QuizAttempts.Include(a => a.Quiz).FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
         if (attempt is null)
         {
             return OperationResult.NotFound();
@@ -269,6 +280,8 @@ public sealed class QuizManagementService(
 
         db.QuizAttempts.Remove(attempt);
         await db.SaveChangesAsync(cancellationToken);
+        // The deleted attempt may have been the student's only pass.
+        await progress.SyncAsync(attempt.Quiz.CourseId, attempt.UserId, cancellationToken);
         logger.LogInformation("Quiz attempt {AttemptId} deleted by an administrator.", id);
         return OperationResult.Success();
     }

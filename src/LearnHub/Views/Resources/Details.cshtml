@@ -82,8 +82,19 @@
                 {
                     <span class="badge-state badge-state--info">Free preview</span>
                 }
+                @if (!Model.IsPublished)
+                {
+                    <span class="badge-state badge-state--draft">Draft</span>
+                }
             </p>
             <h1 id="lesson-title">@Model.Title</h1>
+            @if (!Model.IsPublished)
+            {
+                <div class="status-message status-info" role="status">
+                    <i class="bi bi-eye-slash" aria-hidden="true"></i>
+                    <p>This lesson is a draft. Only administrators can see it, and it does not count towards student progress.</p>
+                </div>
+            }
             @if (!string.IsNullOrWhiteSpace(Model.Summary) && Model.Type != ResourceType.Image)
             {
                 <p class="lead">@Model.Summary</p>
@@ -94,6 +105,21 @@
                 {
                     case ResourceType.Article:
                         <div class="lesson-content">@Model.Body</div>
+                        break;
+
+                    case ResourceType.Exercise:
+                        <div class="lesson-content">@Model.Body</div>
+                        @if (Model.HasSolution)
+                        {
+                            @* A native disclosure: works with the keyboard and screen readers, and without JavaScript. *@
+                            <details class="solution-panel">
+                                <summary>
+                                    <span class="solution-summary-title">Show solution</span>
+                                    <span class="text-muted-lh small">Try the exercise yourself first, then compare your answer.</span>
+                                </summary>
+                                <div class="lesson-content mt-3">@Model.Solution</div>
+                            </details>
+                        }
                         break;
 
                     case ResourceType.Video:

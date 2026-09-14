@@ -7,6 +7,18 @@
             <a class="stretched-link" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.Id">@Model.Title</a>
         </h3>
         <p class="course-card-text">@Model.ShortDescription</p>
+        @if (Model.MatchingLessons.Count > 0)
+        {
+            <div class="matching-lessons">
+                <p class="matching-lessons-title">Matching lessons</p>
+                <ul>
+                    @foreach (var lesson in Model.MatchingLessons)
+                    {
+                        <li><i class="bi bi-search" aria-hidden="true"></i>@lesson</li>
+                    }
+                </ul>
+            </div>
+        }
         <ul class="meta-list">
             <li><span class="@DisplayFormat.DifficultyBadgeClass(Model.Difficulty)">@Model.Difficulty</span></li>
             <li><i class="bi bi-clock" aria-hidden="true"></i>@DisplayFormat.Duration(Model.DurationMinutes)</li>

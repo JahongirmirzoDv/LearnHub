@@ -9,7 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LearnHub.Services;
 
-/// <summary>Student-facing access to lessons. Every method enforces the same access rule.</summary>
+/// <summary>
+/// Student-facing access to lessons. Every method enforces the same access rule; draft lessons and lessons of
+/// unpublished courses exist only for administrators.
+/// </summary>
 public interface ILearningResourceService
 {
     Task<ResourceViewResult> GetForViewingAsync(int id, string? userId, bool isAdmin, CancellationToken cancellationToken = default);
@@ -31,7 +34,7 @@ public sealed class LearningResourceService(
     public async Task<ResourceViewResult> GetForViewingAsync(int id, string? userId, bool isAdmin, CancellationToken cancellationToken = default)
     {
         var resource = await db.LearningResources.AsNoTracking()
-            .Where(r => r.Id == id && (r.Course.IsPublished || isAdmin))
+            .Where(r => r.Id == id && ((r.Course.IsPublished && r.IsPublished) || isAdmin))
             .Select(r => new
             {
                 r.Id,
@@ -42,11 +45,13 @@ public sealed class LearningResourceService(
                 r.Summary,
                 r.Type,
                 r.Body,
+                r.Solution,
                 r.ExternalUrl,
                 r.FileName,
                 r.FileSizeBytes,
                 r.EstimatedMinutes,
-                r.IsPreview
+                r.IsPreview,
+                r.IsPublished
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -63,7 +68,7 @@ public sealed class LearningResourceService(
         }
 
         var outlineRows = await db.LearningResources.AsNoTracking()
-            .Where(r => r.CourseId == resource.CourseId)
+            .Where(r => r.CourseId == resource.CourseId && (r.IsPublished || isAdmin))
             .OrderBy(r => r.SortOrder).ThenBy(r => r.Id)
             .Select(r => new { r.Id, r.Title, r.Type, r.IsPreview, IsCompleted = r.Completions.Any(done => done.UserId == userId) })
             .ToListAsync(cancellationToken);
@@ -103,7 +108,10 @@ public sealed class LearningResourceService(
             Type = resource.Type,
             EstimatedMinutes = resource.EstimatedMinutes,
             IsPreview = resource.IsPreview,
-            Body = resource.Type == ResourceType.Article ? LessonContentRenderer.Render(resource.Body) : HtmlString.Empty,
+            IsPublished = resource.IsPublished,
+            Body = resource.Type is ResourceType.Article or ResourceType.Exercise ? LessonContentRenderer.Render(resource.Body) : HtmlString.Empty,
+            Solution = resource.Type == ResourceType.Exercise ? LessonContentRenderer.Render(resource.Solution) : HtmlString.Empty,
+            HasSolution = resource.Type == ResourceType.Exercise && !string.IsNullOrWhiteSpace(resource.Solution),
             VideoProvider = video?.Provider,
             VideoEmbedUrl = video?.EmbedUrl,
             ExternalUrl = resource.Type == ResourceType.Link ? resource.ExternalUrl : video?.WatchUrl,
@@ -126,7 +134,7 @@ public sealed class LearningResourceService(
         var resource = await db.LearningResources.AsNoTracking()
             .Where(r => r.Id == id
                 && (r.Type == ResourceType.Pdf || r.Type == ResourceType.Image)
-                && (r.Course.IsPublished || isAdmin))
+                && ((r.Course.IsPublished && r.IsPublished) || isAdmin))
             .Select(r => new { r.CourseId, r.IsPreview, r.FilePath, r.FileContentType, r.FileName })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -155,7 +163,7 @@ public sealed class LearningResourceService(
     public async Task<OperationResult<bool>> ToggleCompletionAsync(int id, string userId, CancellationToken cancellationToken = default)
     {
         var courseId = await db.LearningResources.AsNoTracking()
-            .Where(r => r.Id == id && r.Course.IsPublished)
+            .Where(r => r.Id == id && r.Course.IsPublished && r.IsPublished)
             .Select(r => (int?)r.CourseId)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -197,6 +205,7 @@ public sealed class LearningResourceService(
             db.ChangeTracker.Clear();
         }
 
+        await progress.SyncAsync(courseId.Value, userId, cancellationToken);
         return OperationResult<bool>.Success(existing is null);
     }
 

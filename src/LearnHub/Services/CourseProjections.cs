@@ -11,8 +11,8 @@ namespace LearnHub.Services;
 public static class CourseProjections
 {
     /// <summary>
-    /// Course card data. A quiz counts only when it is published and has questions, the same rule used by
-    /// progress calculation and the quiz pages.
+    /// Course card data. Only published lessons count, and a quiz counts only when it is published and has
+    /// questions: the same rules used by progress calculation and the quiz pages.
     /// </summary>
     public static Expression<Func<Course, CourseCardViewModel>> ToCard(string? userId) => course => new CourseCardViewModel
     {
@@ -26,7 +26,7 @@ public static class CourseProjections
         DurationMinutes = course.DurationMinutes,
         ThumbnailPath = course.ThumbnailPath,
         InstructorName = course.InstructorName,
-        ResourceCount = course.Resources.Count,
+        ResourceCount = course.Resources.Count(resource => resource.IsPublished),
         QuizCount = course.Quizzes.Count(quiz => quiz.IsPublished && quiz.Questions.Any()),
         EnrollmentCount = course.Enrollments.Count,
         IsEnrolled = userId != null && course.Enrollments.Any(enrollment => enrollment.UserId == userId)

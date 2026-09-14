@@ -37,7 +37,7 @@
             </div>
         </section>
 
-        <section class="form-section type-fields" data-types="Article" aria-labelledby="resource-body-title">
+        <section class="form-section type-fields" data-types="Article Exercise" aria-labelledby="resource-body-title">
             <h2 id="resource-body-title">Lesson content</h2>
             <label asp-for="Body" class="form-label"></label>
             <textarea asp-for="Body" class="form-control font-monospace" rows="16" data-char-counter aria-describedby="body-help"></textarea>
@@ -47,6 +47,14 @@
                 HTML is shown as plain text, never run.
             </div>
             <span asp-validation-for="Body"></span>
+        </section>
+
+        <section class="form-section type-fields" data-types="Exercise" aria-labelledby="resource-solution-title">
+            <h2 id="resource-solution-title">Solution</h2>
+            <label asp-for="Solution" class="form-label"></label>
+            <textarea asp-for="Solution" class="form-control font-monospace" rows="10" data-char-counter aria-describedby="solution-help"></textarea>
+            <div id="solution-help" class="form-text">Students see the task above and open this worked answer when they are ready. The same formatting rules apply.</div>
+            <span asp-validation-for="Solution"></span>
         </section>
 
         <section class="form-section type-fields" data-types="Video Link" aria-labelledby="resource-link-title">
@@ -87,6 +95,10 @@
                 <label asp-for="EstimatedMinutes" class="form-label"></label>
                 <input asp-for="EstimatedMinutes" class="form-control" min="1" max="600" />
                 <span asp-validation-for="EstimatedMinutes"></span>
+            </div>
+            <div class="form-check form-switch mb-2">
+                <input asp-for="IsPublished" class="form-check-input" role="switch" />
+                <label asp-for="IsPublished" class="form-check-label"></label>
             </div>
             <div class="form-check form-switch">
                 <input asp-for="IsPreview" class="form-check-input" role="switch" />

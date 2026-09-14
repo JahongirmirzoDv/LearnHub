@@ -90,9 +90,9 @@ public sealed class EnrollmentService(
 
         var progressByCourse = await progress.GetForCoursesAsync(userId, courseIds, cancellationToken);
 
-        // Next lesson = first resource (by order) the student has not completed.
+        // Next lesson = first published resource (by order) the student has not completed.
         var incomplete = await db.LearningResources.AsNoTracking()
-            .Where(r => courseIds.Contains(r.CourseId) && !r.Completions.Any(done => done.UserId == userId))
+            .Where(r => courseIds.Contains(r.CourseId) && r.IsPublished && !r.Completions.Any(done => done.UserId == userId))
             .OrderBy(r => r.SortOrder).ThenBy(r => r.Id)
             .Select(r => new { r.CourseId, r.Id, r.Title })
             .ToListAsync(cancellationToken);
@@ -182,16 +182,15 @@ public sealed class EnrollmentService(
                 CourseTitle = e.Course.Title,
                 e.EnrolledAt,
                 e.LastAccessedAt,
-                Total = e.Course.Resources.Count + e.Course.Quizzes.Count(q => q.IsPublished && q.Questions.Any()),
-                Completed = e.Course.Resources.Count(r => r.Completions.Any(done => done.UserId == e.UserId))
-                    + e.Course.Quizzes.Count(q => q.IsPublished && q.Questions.Any() && q.Attempts.Any(a => a.UserId == e.UserId && a.Passed))
+                e.CompletionPercentage,
+                e.CompletedAt
             })
             .ToPagedResultAsync(query.Page, AdminPageSize, cancellationToken);
 
         var items = page.Items
             .Select(e => new AdminEnrollmentListItem(
                 e.Id, e.UserId, e.StudentName, e.StudentEmail, e.CourseId, e.CourseTitle, e.EnrolledAt, e.LastAccessedAt,
-                new CourseProgress(e.Completed, e.Total).Percent))
+                e.CompletionPercentage, e.CompletedAt))
             .ToList();
 
         query.Page = page.Page;
@@ -272,6 +271,9 @@ public sealed class EnrollmentService(
             db.ChangeTracker.Clear();
             return OperationResult.Failure(duplicateMessage);
         }
+
+        // Lessons completed before leaving the course count again straight away.
+        await progress.SyncAsync(courseId, userId, cancellationToken);
 
         logger.LogInformation("User {UserId} enrolled in course {CourseId}.", userId, courseId);
         return OperationResult.Success();

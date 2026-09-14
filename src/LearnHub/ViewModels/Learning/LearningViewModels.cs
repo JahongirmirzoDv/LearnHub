@@ -24,8 +24,16 @@ public sealed class ResourceDetailsViewModel
 
     public bool IsPreview { get; init; }
 
-    /// <summary>Article body already encoded and formatted by <c>LessonContentRenderer</c>.</summary>
+    /// <summary>Article or exercise text, already encoded and formatted by <c>LessonContentRenderer</c>.</summary>
     public IHtmlContent Body { get; init; } = HtmlString.Empty;
+
+    /// <summary>Exercise solution, formatted like <see cref="Body"/>; empty for other types.</summary>
+    public IHtmlContent Solution { get; init; } = HtmlString.Empty;
+
+    public bool HasSolution { get; init; }
+
+    /// <summary>Only administrators can open draft resources; the page shows them a notice.</summary>
+    public bool IsPublished { get; init; } = true;
 
     public string? VideoProvider { get; init; }
 
@@ -85,10 +93,15 @@ public sealed class TakeQuizViewModel
 
     public int? BestScorePercent { get; init; }
 
+    /// <summary>Signed, time-limited token recording when the quiz was opened; posted back with the answers.</summary>
+    public string StartToken { get; init; } = string.Empty;
+
+    public int TotalPoints => Questions.Sum(q => q.Points);
+
     public IReadOnlyList<TakeQuizQuestion> Questions { get; init; } = [];
 }
 
-public sealed record TakeQuizQuestion(int Id, int Number, string Text, IReadOnlyList<TakeQuizOption> Options);
+public sealed record TakeQuizQuestion(int Id, int Number, string Text, int Points, IReadOnlyList<TakeQuizOption> Options);
 
 /// <summary>Deliberately has no "is correct" flag: correct answers never reach the browser before submission.</summary>
 public sealed record TakeQuizOption(int Id, string Text);
@@ -97,6 +110,8 @@ public sealed record TakeQuizOption(int Id, string Text);
 public sealed class QuizSubmissionModel
 {
     public Dictionary<int, int> Answers { get; set; } = [];
+
+    public string? StartToken { get; set; }
 }
 
 public sealed record QuizTakeResult(ResourceAccess Access, int? CourseId, TakeQuizViewModel? Model);
@@ -117,11 +132,20 @@ public sealed class QuizResultViewModel
 
     public string StudentName { get; init; } = string.Empty;
 
-    public DateTime SubmittedAt { get; init; }
+    public DateTime StartedAt { get; init; }
+
+    public DateTime CompletedAt { get; init; }
+
+    /// <summary>Null when the start time is unknown (for example the quiz page was open for more than a day).</summary>
+    public TimeSpan? TimeTaken => CompletedAt > StartedAt ? CompletedAt - StartedAt : null;
 
     public int CorrectCount { get; init; }
 
     public int QuestionCount { get; init; }
+
+    public int Score { get; init; }
+
+    public int MaxScore { get; init; }
 
     public int ScorePercent { get; init; }
 
@@ -134,11 +158,11 @@ public sealed class QuizResultViewModel
     public IReadOnlyList<QuizResultQuestion> Questions { get; init; } = [];
 }
 
-public sealed record QuizResultQuestion(int Number, string Text, string? Explanation, bool IsCorrect, bool WasAnswered, IReadOnlyList<QuizResultOption> Options);
+public sealed record QuizResultQuestion(int Number, string Text, string? Explanation, int Points, bool IsCorrect, bool WasAnswered, IReadOnlyList<QuizResultOption> Options);
 
 public sealed record QuizResultOption(string Text, bool IsCorrect, bool IsSelected);
 
-public sealed record QuizAttemptSummary(int AttemptId, int QuizId, string QuizTitle, int CourseId, string CourseTitle, DateTime SubmittedAt, int ScorePercent, bool Passed);
+public sealed record QuizAttemptSummary(int AttemptId, int QuizId, string QuizTitle, int CourseId, string CourseTitle, DateTime CompletedAt, int ScorePercent, bool Passed);
 
 public sealed class QuizHistoryViewModel
 {
@@ -211,4 +235,74 @@ public sealed class StudentDashboardViewModel
     public IReadOnlyList<ActivityItem> RecentActivity { get; init; } = [];
 
     public IReadOnlyList<CourseCardViewModel> RecommendedCourses { get; init; } = [];
+}
+
+/// <summary>A quiz the student can take, with their own results so far.</summary>
+public sealed record StudentQuizItem(
+    int QuizId,
+    string Title,
+    string? Description,
+    int CourseId,
+    string CourseTitle,
+    int QuestionCount,
+    int TotalPoints,
+    int PassMarkPercent,
+    int AttemptCount,
+    int? BestScorePercent,
+    bool Passed,
+    int? LatestAttemptId);
+
+public sealed class StudentQuizzesViewModel
+{
+    public IReadOnlyList<StudentQuizItem> Quizzes { get; init; } = [];
+
+    public IReadOnlyList<QuizAttemptSummary> RecentAttempts { get; init; } = [];
+
+    public int EnrolledCourseCount { get; init; }
+
+    public int PassedCount => Quizzes.Count(q => q.Passed);
+
+    public int NotAttemptedCount => Quizzes.Count(q => q.AttemptCount == 0);
+}
+
+public sealed class CourseProgressReport
+{
+    public int CourseId { get; init; }
+
+    public string CourseTitle { get; init; } = string.Empty;
+
+    public int CategoryId { get; init; }
+
+    public string CategoryName { get; init; } = string.Empty;
+
+    public DateTime EnrolledAt { get; init; }
+
+    public DateTime? CompletedAt { get; init; }
+
+    public int LessonsCompleted { get; init; }
+
+    public int LessonsTotal { get; init; }
+
+    public IReadOnlyList<StudentQuizItem> Quizzes { get; init; } = [];
+
+    public int QuizzesPassed => Quizzes.Count(q => q.Passed);
+
+    public CourseProgress Progress => new(LessonsCompleted + QuizzesPassed, LessonsTotal + Quizzes.Count);
+}
+
+public sealed class StudentProgressViewModel
+{
+    public IReadOnlyList<CourseProgressReport> Courses { get; init; } = [];
+
+    public int CompletedCourseCount => Courses.Count(c => c.Progress.IsCompleted);
+
+    public int LessonsCompleted => Courses.Sum(c => c.LessonsCompleted);
+
+    public int LessonsTotal => Courses.Sum(c => c.LessonsTotal);
+
+    public int QuizzesPassed => Courses.Sum(c => c.QuizzesPassed);
+
+    public int QuizzesTotal => Courses.Sum(c => c.Quizzes.Count);
+
+    public CourseProgress Overall => new(LessonsCompleted + QuizzesPassed, LessonsTotal + QuizzesTotal);
 }

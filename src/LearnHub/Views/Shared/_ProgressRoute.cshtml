@@ -2,7 +2,7 @@
 @{
     var state = Model.IsCompleted ? "is-complete" : Model.IsStarted ? null : "is-empty";
 }
-<div class="progress-route @state" role="progressbar" aria-label="Course progress"
+<div class="progress-route @state" role="progressbar" aria-label="@(ViewData["ProgressLabel"] as string ?? "Course progress")"
      aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Model.Percent">
     <span class="progress-route-fill @DisplayFormat.ProgressWidthClass(Model.Percent)"></span>
 </div>

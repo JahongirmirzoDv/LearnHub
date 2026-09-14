@@ -107,7 +107,7 @@ public sealed class CourseManagementService(
         course.Resources = await db.LearningResources.AsNoTracking()
             .Where(r => r.CourseId == id)
             .OrderBy(r => r.SortOrder).ThenBy(r => r.Id)
-            .Select(r => new AdminResourceListItem(r.Id, r.Title, r.Type, r.CourseId, r.Course.Title, r.SortOrder, r.IsPreview, r.Completions.Count, r.UpdatedAt))
+            .Select(r => new AdminResourceListItem(r.Id, r.Title, r.Type, r.CourseId, r.Course.Title, r.SortOrder, r.IsPreview, r.IsPublished, r.Completions.Count, r.UpdatedAt))
             .ToListAsync(cancellationToken);
 
         course.Quizzes = await db.Quizzes.AsNoTracking()

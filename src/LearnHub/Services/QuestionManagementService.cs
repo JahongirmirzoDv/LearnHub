@@ -25,7 +25,10 @@ public interface IQuestionManagementService
     Task<OperationResult<int>> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }
 
-public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<QuestionManagementService> logger) : IQuestionManagementService
+public sealed class QuestionManagementService(
+    ApplicationDbContext db,
+    IProgressService progress,
+    ILogger<QuestionManagementService> logger) : IQuestionManagementService
 {
     public async Task<QuestionFormViewModel?> GetNewAsync(int quizId, CancellationToken cancellationToken = default)
     {
@@ -51,6 +54,7 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
                 q.Text,
                 q.Explanation,
                 q.SortOrder,
+                q.Points,
                 Options = q.Options.OrderBy(o => o.SortOrder).ThenBy(o => o.Id).Select(o => new { o.Id, o.Text, o.IsCorrect }).ToList()
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -68,6 +72,7 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
             Text = question.Text,
             Explanation = question.Explanation,
             SortOrder = question.SortOrder,
+            Points = question.Points,
             Options = question.Options.Select(o => new AnswerOptionInput { Id = o.Id, Text = o.Text }).ToList()
         };
 
@@ -81,7 +86,8 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
 
     public async Task<OperationResult<int>> CreateAsync(QuestionFormViewModel model, CancellationToken cancellationToken = default)
     {
-        if (!await db.Quizzes.AnyAsync(q => q.Id == model.QuizId, cancellationToken))
+        var courseId = await db.Quizzes.Where(q => q.Id == model.QuizId).Select(q => (int?)q.CourseId).FirstOrDefaultAsync(cancellationToken);
+        if (courseId is null)
         {
             return OperationResult<int>.NotFound();
         }
@@ -91,7 +97,8 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
             QuizId = model.QuizId,
             Text = TextInput.Required(model.Text),
             Explanation = TextInput.Clean(model.Explanation),
-            SortOrder = model.SortOrder
+            SortOrder = model.SortOrder,
+            Points = model.Points
         };
 
         var position = 0;
@@ -108,6 +115,8 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
 
         db.Questions.Add(question);
         await db.SaveChangesAsync(cancellationToken);
+        // The first question makes a published quiz available, which changes every enrolled student's progress.
+        await progress.SyncAsync(courseId.Value, cancellationToken: cancellationToken);
         logger.LogInformation("Question {QuestionId} added to quiz {QuizId}.", question.Id, question.QuizId);
         return OperationResult<int>.Success(question.QuizId);
     }
@@ -123,6 +132,8 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
         question.Text = TextInput.Required(model.Text);
         question.Explanation = TextInput.Clean(model.Explanation);
         question.SortOrder = model.SortOrder;
+        // Past attempts keep their stored score; new points apply to attempts submitted from now on.
+        question.Points = model.Points;
 
         var keptOptionIds = new HashSet<int>();
         var position = 0;
@@ -182,8 +193,8 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
 
     public async Task<OperationResult<int>> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var quizId = await db.Questions.Where(q => q.Id == id).Select(q => (int?)q.QuizId).FirstOrDefaultAsync(cancellationToken);
-        if (quizId is null)
+        var target = await db.Questions.Where(q => q.Id == id).Select(q => new { q.QuizId, q.Quiz.CourseId }).FirstOrDefaultAsync(cancellationToken);
+        if (target is null)
         {
             return OperationResult<int>.NotFound();
         }
@@ -195,7 +206,9 @@ public sealed class QuestionManagementService(ApplicationDbContext db, ILogger<Q
             await db.Questions.Where(q => q.Id == id).ExecuteDeleteAsync(cancellationToken);
         }, cancellationToken);
 
-        logger.LogInformation("Question {QuestionId} deleted from quiz {QuizId}.", id, quizId);
-        return OperationResult<int>.Success(quizId.Value);
+        // Removing the last question makes the quiz unavailable, so it no longer counts towards progress.
+        await progress.SyncAsync(target.CourseId, cancellationToken: cancellationToken);
+        logger.LogInformation("Question {QuestionId} deleted from quiz {QuizId}.", id, target.QuizId);
+        return OperationResult<int>.Success(target.QuizId);
     }
 }

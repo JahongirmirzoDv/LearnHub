@@ -7,7 +7,7 @@
     <div class="container">
         <nav aria-label="Breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Student" asp-action="Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-controller="Quizzes" asp-action="Index">Quizzes</a></li>
                 <li class="breadcrumb-item"><a asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">@Model.CourseTitle</a></li>
                 <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
             </ol>
@@ -19,6 +19,7 @@
         }
         <ul class="meta-list mt-3">
             <li><i class="bi bi-patch-question" aria-hidden="true"></i>@DisplayFormat.Plural(Model.Questions.Count, "question")</li>
+            <li><i class="bi bi-star" aria-hidden="true"></i>@DisplayFormat.Plural(Model.TotalPoints, "point") in total</li>
             <li><i class="bi bi-flag" aria-hidden="true"></i>Pass mark @Model.PassMarkPercent%</li>
             @if (Model.PreviousAttemptCount > 0)
             {
@@ -33,13 +34,14 @@
         <div class="row">
             <div class="col-lg-9">
                 <form method="post" asp-action="Take" asp-route-id="@Model.QuizId" data-quiz>
-                    <p class="text-muted-lh">Choose one answer for each question. Unanswered questions count as incorrect. You can retake the quiz as often as you like.</p>
+                    <input type="hidden" name="StartToken" value="@Model.StartToken" />
+                    <p class="text-muted-lh">Choose one answer for each question. Unanswered questions count as incorrect. Your score is the share of points you earn, and you can retake the quiz as often as you like.</p>
 
                     @foreach (var question in Model.Questions)
                     {
                         <fieldset class="quiz-question" id="@("question-" + question.Id)" data-question>
                             <legend>
-                                <span class="quiz-question-number">Question @question.Number of @Model.Questions.Count</span>
+                                <span class="quiz-question-number">Question @question.Number of @Model.Questions.Count, worth @DisplayFormat.Plural(question.Points, "point")</span>
                                 @question.Text
                             </legend>
                             <div class="quiz-options">

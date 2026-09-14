@@ -1,6 +1,6 @@
 @model StudentDashboardViewModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "My learning";
 }
 
 <section class="page-header">
@@ -128,7 +128,7 @@
                                                 <strong>@attempt.QuizTitle</strong>
                                                 <span class="d-block small text-muted-lh">@attempt.CourseTitle</span>
                                             </td>
-                                            <td><time data-local datetime="@DisplayFormat.IsoDate(attempt.SubmittedAt)">@DisplayFormat.Date(attempt.SubmittedAt)</time></td>
+                                            <td><time data-local datetime="@DisplayFormat.IsoDate(attempt.CompletedAt)">@DisplayFormat.Date(attempt.CompletedAt)</time></td>
                                             <td class="text-end"><span class="score-pill @(attempt.Passed ? "is-passed" : null)">@attempt.ScorePercent%</span></td>
                                             <td class="text-end"><a asp-controller="Quizzes" asp-action="Result" asp-route-id="@attempt.AttemptId">Review<span class="visually-hidden"> @attempt.QuizTitle</span></a></td>
                                         </tr>

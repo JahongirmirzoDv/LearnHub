@@ -14,6 +14,11 @@ public sealed class StudentController(IDashboardService dashboards, IEnrollmentS
     public async Task<IActionResult> Dashboard(CancellationToken cancellationToken) =>
         View(await dashboards.GetStudentDashboardAsync(User.GetRequiredUserId(), User.GetDisplayName(), cancellationToken));
 
+    /// <summary>Lesson and quiz progress for every enrolled course.</summary>
+    [HttpGet]
+    public async Task<IActionResult> Progress(CancellationToken cancellationToken) =>
+        View(await dashboards.GetProgressReportAsync(User.GetRequiredUserId(), cancellationToken));
+
     [HttpGet]
     public async Task<IActionResult> MyCourses(MyCoursesFilter filter = MyCoursesFilter.All, CancellationToken cancellationToken = default) =>
         View(await enrollments.GetMyCoursesAsync(User.GetRequiredUserId(), filter, cancellationToken));

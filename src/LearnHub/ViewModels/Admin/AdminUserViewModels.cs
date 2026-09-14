@@ -72,7 +72,7 @@ public sealed class AdminUserDetailsViewModel
     public IReadOnlyList<QuizAttemptSummary> RecentAttempts { get; init; } = [];
 }
 
-public sealed record AdminUserEnrollmentItem(int EnrollmentId, int CourseId, string CourseTitle, DateTime EnrolledAt, int ProgressPercent);
+public sealed record AdminUserEnrollmentItem(int EnrollmentId, int CourseId, string CourseTitle, DateTime EnrolledAt, int ProgressPercent, DateTime? CompletedAt);
 
 public sealed record UserDeleteViewModel(string Id, string FullName, string Email, bool IsAdmin, int EnrollmentCount, int AttemptCount);
 

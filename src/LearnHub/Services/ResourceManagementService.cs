@@ -33,6 +33,7 @@ public sealed class ResourceManagementService(
     ApplicationDbContext db,
     ILookupService lookups,
     IFileStorageService storage,
+    IProgressService progress,
     ILogger<ResourceManagementService> logger) : IResourceManagementService
 {
     public const int PageSize = 20;
@@ -60,7 +61,7 @@ public sealed class ResourceManagementService(
         var results = await resources
             .OrderBy(r => r.Course.Title).ThenBy(r => r.SortOrder).ThenBy(r => r.Id)
             .Select(r => new AdminResourceListItem(
-                r.Id, r.Title, r.Type, r.CourseId, r.Course.Title, r.SortOrder, r.IsPreview, r.Completions.Count, r.UpdatedAt))
+                r.Id, r.Title, r.Type, r.CourseId, r.Course.Title, r.SortOrder, r.IsPreview, r.IsPublished, r.Completions.Count, r.UpdatedAt))
             .ToPagedResultAsync(query.Page, PageSize, cancellationToken);
 
         query.Page = results.Page;
@@ -99,10 +100,12 @@ public sealed class ResourceManagementService(
                 Summary = r.Summary,
                 Type = r.Type,
                 Body = r.Body,
+                Solution = r.Solution,
                 ExternalUrl = r.ExternalUrl,
                 EstimatedMinutes = r.EstimatedMinutes,
                 SortOrder = r.SortOrder,
                 IsPreview = r.IsPreview,
+                IsPublished = r.IsPublished,
                 ExistingFileName = r.FileName,
                 ExistingFileSizeBytes = r.FileSizeBytes
             })
@@ -164,6 +167,7 @@ public sealed class ResourceManagementService(
             throw;
         }
 
+        await progress.SyncAsync(resource.CourseId, cancellationToken: cancellationToken);
         logger.LogInformation("Resource {ResourceId} ({Type}) created in course {CourseId}.", resource.Id, resource.Type, resource.CourseId);
         return OperationResult<int>.Success(resource.Id);
     }
@@ -182,6 +186,7 @@ public sealed class ResourceManagementService(
         }
 
         var previousFile = resource.FilePath;
+        var previousCourseId = resource.CourseId;
         var existingFileFits = model.Type switch
         {
             ResourceType.Pdf => resource.FileContentType == "application/pdf",
@@ -233,6 +238,13 @@ public sealed class ResourceManagementService(
             storage.Delete(previousFile);
         }
 
+        // Publishing, unpublishing or moving a lesson changes what counts towards progress.
+        await progress.SyncAsync(resource.CourseId, cancellationToken: cancellationToken);
+        if (previousCourseId != resource.CourseId)
+        {
+            await progress.SyncAsync(previousCourseId, cancellationToken: cancellationToken);
+        }
+
         logger.LogInformation("Resource {ResourceId} updated.", id);
         return OperationResult.Success();
     }
@@ -254,6 +266,7 @@ public sealed class ResourceManagementService(
         db.LearningResources.Remove(resource);
         await db.SaveChangesAsync(cancellationToken);
         storage.Delete(resource.FilePath);
+        await progress.SyncAsync(resource.CourseId, cancellationToken: cancellationToken);
 
         logger.LogInformation("Resource {ResourceId} deleted from course {CourseId}.", id, resource.CourseId);
         return OperationResult<int>.Success(resource.CourseId);
@@ -277,8 +290,10 @@ public sealed class ResourceManagementService(
         resource.EstimatedMinutes = model.EstimatedMinutes;
         resource.SortOrder = model.SortOrder;
         resource.IsPreview = model.IsPreview;
+        resource.IsPublished = model.IsPublished;
 
-        resource.Body = model.Type == ResourceType.Article ? TextInput.Clean(model.Body) : null;
+        resource.Body = model.Type is ResourceType.Article or ResourceType.Exercise ? TextInput.Clean(model.Body) : null;
+        resource.Solution = model.Type == ResourceType.Exercise ? TextInput.Clean(model.Solution) : null;
         resource.ExternalUrl = model.Type switch
         {
             // Store the canonical watch URL; the embed URL is always rebuilt from the parsed id.

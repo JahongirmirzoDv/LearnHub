@@ -93,12 +93,14 @@ public sealed class AdminQuizDetailsViewModel
 
     public int? AverageScorePercent { get; init; }
 
+    public int TotalPoints => Questions.Sum(q => q.Points);
+
     public DateTime UpdatedAt { get; init; }
 
     public IReadOnlyList<AdminQuestionItem> Questions { get; init; } = [];
 }
 
-public sealed record AdminQuestionItem(int Id, int SortOrder, string Text, string? Explanation, int AnswerCount, IReadOnlyList<AdminOptionItem> Options);
+public sealed record AdminQuestionItem(int Id, int SortOrder, string Text, string? Explanation, int Points, int AnswerCount, IReadOnlyList<AdminOptionItem> Options);
 
 public sealed record AdminOptionItem(int Id, string Text, bool IsCorrect);
 
@@ -140,6 +142,10 @@ public sealed class QuestionFormViewModel : IValidatableObject
     [Range(0, 999, ErrorMessage = "Order must be between {1} and {2}.")]
     [Display(Name = "Order in quiz")]
     public int SortOrder { get; set; }
+
+    [Range(1, 100, ErrorMessage = "Points must be between {1} and {2}.")]
+    [Display(Name = "Points")]
+    public int Points { get; set; } = 1;
 
     public List<AnswerOptionInput> Options { get; set; } = [];
 
@@ -217,9 +223,11 @@ public sealed record AdminAttemptListItem(
     int QuizId,
     string QuizTitle,
     string CourseTitle,
+    int Score,
+    int MaxScore,
     int ScorePercent,
     bool Passed,
-    DateTime SubmittedAt);
+    DateTime CompletedAt);
 
 public sealed class AdminAttemptListViewModel
 {
@@ -230,7 +238,7 @@ public sealed class AdminAttemptListViewModel
     public IReadOnlyList<SelectOption> Quizzes { get; init; } = [];
 }
 
-public sealed record AttemptDeleteViewModel(int Id, string StudentName, string QuizTitle, int ScorePercent, DateTime SubmittedAt);
+public sealed record AttemptDeleteViewModel(int Id, string StudentName, string QuizTitle, int ScorePercent, DateTime CompletedAt);
 
 // ---------------------------------------------------------------- Enrolments
 
@@ -259,7 +267,8 @@ public sealed record AdminEnrollmentListItem(
     string CourseTitle,
     DateTime EnrolledAt,
     DateTime? LastAccessedAt,
-    int ProgressPercent);
+    int ProgressPercent,
+    DateTime? CompletedAt);
 
 public sealed class AdminEnrollmentListViewModel
 {

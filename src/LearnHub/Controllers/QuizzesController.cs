@@ -10,6 +10,11 @@ namespace LearnHub.Controllers;
 [Authorize(Roles = AppRoles.Student)]
 public sealed class QuizzesController(IQuizService quizzes) : Controller
 {
+    /// <summary>The quizzes of every course the student is enrolled in, with their best scores.</summary>
+    [HttpGet]
+    public async Task<IActionResult> Index(CancellationToken cancellationToken) =>
+        View(await quizzes.GetOverviewAsync(User.GetRequiredUserId(), cancellationToken));
+
     [HttpGet]
     public async Task<IActionResult> Take(int id, CancellationToken cancellationToken)
     {
@@ -27,7 +32,7 @@ public sealed class QuizzesController(IQuizService quizzes) : Controller
     [ActionName("Take")]
     public async Task<IActionResult> Submit(int id, QuizSubmissionModel submission, CancellationToken cancellationToken)
     {
-        var result = await quizzes.SubmitAsync(id, User.GetRequiredUserId(), submission.Answers, cancellationToken);
+        var result = await quizzes.SubmitAsync(id, User.GetRequiredUserId(), submission.Answers, submission.StartToken, cancellationToken);
         return result.Access switch
         {
             ResourceAccess.Allowed => RedirectToAction(nameof(Result), new { id = result.AttemptId }),

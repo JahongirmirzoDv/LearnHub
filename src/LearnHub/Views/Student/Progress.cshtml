@@ -1,0 +1,90 @@
+@model StudentProgressViewModel
+@{
+    ViewData["Title"] = "Progress";
+}
+
+<section class="page-header">
+    <div class="container">
+        <h1>Progress</h1>
+        <p>How far you have travelled on each course route. Progress counts published lessons you mark complete and quizzes you pass.</p>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        @if (Model.Courses.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></span>
+                <h2>No progress to show yet</h2>
+                <p>Enrol in a course and complete your first lesson to start tracking your progress.</p>
+                <a class="btn btn-primary" asp-controller="Courses" asp-action="Index">Browse courses</a>
+            </div>
+        }
+        else
+        {
+            <section class="panel mb-4" aria-labelledby="overall-title">
+                <h2 id="overall-title" class="panel-title">Overall progress</h2>
+                <partial name="_ProgressRoute" model="Model.Overall" view-data='new ViewDataDictionary(ViewData) { ["ProgressLabel"] = "Overall progress" }' />
+                <dl class="journey-strip quiz-summary mt-3 mb-0">
+                    <div><dt>Courses completed</dt><dd>@Model.CompletedCourseCount of @Model.Courses.Count</dd></div>
+                    <div><dt>Lessons completed</dt><dd>@Model.LessonsCompleted of @Model.LessonsTotal</dd></div>
+                    <div><dt>Quizzes passed</dt><dd>@Model.QuizzesPassed of @Model.QuizzesTotal</dd></div>
+                </dl>
+            </section>
+
+            <h2 class="h3 mb-3">By course</h2>
+            <ul class="progress-course-list">
+                @foreach (var course in Model.Courses)
+                {
+                    <li class="progress-course panel @DisplayFormat.LineClass(course.CategoryId)">
+                        <div class="progress-course-head">
+                            <div>
+                                <h3 class="h5 mb-1"><a asp-controller="Courses" asp-action="Details" asp-route-id="@course.CourseId">@course.CourseTitle</a></h3>
+                                <p class="text-muted-lh small mb-0">
+                                    @course.CategoryName, enrolled <time data-local datetime="@DisplayFormat.IsoDate(course.EnrolledAt)">@DisplayFormat.Date(course.EnrolledAt)</time>
+                                </p>
+                            </div>
+                            @if (course.CompletedAt is DateTime completedAt)
+                            {
+                                <span class="badge-state badge-state--live">Completed <time data-local datetime="@DisplayFormat.IsoDate(completedAt)">@DisplayFormat.Date(completedAt)</time></span>
+                            }
+                        </div>
+
+                        <partial name="_ProgressRoute" model="course.Progress" view-data='new ViewDataDictionary(ViewData) { ["ProgressLabel"] = $"Progress in {course.CourseTitle}" }' />
+
+                        <div class="progress-course-parts">
+                            <p class="mb-0"><i class="bi bi-file-text" aria-hidden="true"></i> Lessons: <strong>@course.LessonsCompleted of @course.LessonsTotal</strong> completed</p>
+                            <p class="mb-0"><i class="bi bi-patch-check" aria-hidden="true"></i> Quizzes: <strong>@course.QuizzesPassed of @course.Quizzes.Count</strong> passed</p>
+                        </div>
+
+                        @if (course.Quizzes.Count > 0)
+                        {
+                            <ul class="progress-quiz-list">
+                                @foreach (var quiz in course.Quizzes)
+                                {
+                                    <li>
+                                        <span>@quiz.Title</span>
+                                        <span class="text-muted-lh small">
+                                            @(quiz.BestScorePercent is int best ? $"best {best}%, pass mark {quiz.PassMarkPercent}%" : "not attempted")
+                                        </span>
+                                        @if (quiz.Passed)
+                                        {
+                                            <span class="badge-state badge-state--live">Passed</span>
+                                        }
+                                        else
+                                        {
+                                            <a class="btn btn-sm btn-outline-primary" asp-controller="Quizzes" asp-action="Take" asp-route-id="@quiz.QuizId">
+                                                @(quiz.AttemptCount == 0 ? "Take quiz" : "Retake")<span class="visually-hidden"> @quiz.Title</span>
+                                            </a>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

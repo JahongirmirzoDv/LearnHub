@@ -46,6 +46,9 @@ public sealed class CourseCardViewModel
 
     /// <summary>Filled in for enrolled courses only.</summary>
     public CourseProgress? Progress { get; set; }
+
+    /// <summary>Titles of published lessons that matched the search term, shown under the card in search results.</summary>
+    public IReadOnlyList<string> MatchingLessons { get; set; } = [];
 }
 
 public sealed record CategoryOption(int Id, string Name, string IconName, int CourseCount);

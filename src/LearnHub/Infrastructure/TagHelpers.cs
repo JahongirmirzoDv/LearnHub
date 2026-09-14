@@ -20,7 +20,7 @@ public sealed class NavLinkTagHelper : TagHelper
     [HtmlAttributeName("lh-nav")]
     public string Controllers { get; set; } = string.Empty;
 
-    /// <summary>Optional action name that must also match (e.g. "Dashboard").</summary>
+    /// <summary>Optional action name, or comma-separated names, one of which must also match (e.g. "Dashboard,MyCourses").</summary>
     [HtmlAttributeName("lh-nav-action")]
     public string? Action { get; set; }
 
@@ -42,7 +42,9 @@ public sealed class NavLinkTagHelper : TagHelper
                     && string.Equals(controller, currentController, StringComparison.OrdinalIgnoreCase);
             });
 
-        var actionMatches = Action is null || string.Equals(Action, currentAction, StringComparison.OrdinalIgnoreCase);
+        var actionMatches = Action is null || Action
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(action => string.Equals(action, currentAction, StringComparison.OrdinalIgnoreCase));
         if (controllerMatches && actionMatches)
         {
             output.AddClass("active", HtmlEncoder.Default);

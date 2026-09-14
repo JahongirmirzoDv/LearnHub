@@ -1,0 +1,97 @@
+@model StudentQuizzesViewModel
+@{
+    ViewData["Title"] = "Quizzes";
+}
+
+<section class="page-header">
+    <div class="container d-flex flex-wrap align-items-end justify-content-between gap-3">
+        <div>
+            <h1>Quizzes</h1>
+            <p>The quizzes in the courses you are enrolled in. Retake any quiz to improve your best score.</p>
+        </div>
+        <a class="btn btn-outline-primary" asp-action="History">All my results</a>
+    </div>
+</section>
+
+<div class="page-body">
+    <div class="container">
+        @if (Model.EnrolledCourseCount == 0)
+        {
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="bi bi-patch-question"></i></span>
+                <h2>Enrol in a course to unlock its quizzes</h2>
+                <p>Every course ends with a quiz. Browse the catalogue and enrol for free to take it.</p>
+                <a class="btn btn-primary" asp-controller="Courses" asp-action="Index">Browse courses</a>
+            </div>
+        }
+        else if (Model.Quizzes.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
+                <h2>No quizzes are available yet</h2>
+                <p>Your courses don't have published quizzes at the moment. They appear here as soon as they are ready.</p>
+                <a class="btn btn-outline-primary" asp-controller="Student" asp-action="Dashboard">Back to my learning</a>
+            </div>
+        }
+        else
+        {
+            <dl class="journey-strip quiz-summary mb-4">
+                <div><dt>Available quizzes</dt><dd>@Model.Quizzes.Count</dd></div>
+                <div><dt>Passed</dt><dd>@Model.PassedCount</dd></div>
+                <div><dt>Not attempted yet</dt><dd>@Model.NotAttemptedCount</dd></div>
+            </dl>
+
+            <div class="table-wrap">
+                <table class="table table-lh table-hover">
+                    <caption class="visually-hidden">Quizzes in your enrolled courses</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Quiz</th>
+                            <th scope="col">Course</th>
+                            <th scope="col" class="num">Questions</th>
+                            <th scope="col" class="num">Pass mark</th>
+                            <th scope="col" class="num">Best score</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var quiz in Model.Quizzes)
+                        {
+                            <tr>
+                                <td data-label="Quiz"><strong>@quiz.Title</strong></td>
+                                <td data-label="Course"><a asp-controller="Courses" asp-action="Details" asp-route-id="@quiz.CourseId">@quiz.CourseTitle</a></td>
+                                <td class="num" data-label="Questions">@quiz.QuestionCount <span class="text-muted-lh small">(@DisplayFormat.Plural(quiz.TotalPoints, "point"))</span></td>
+                                <td class="num" data-label="Pass mark">@quiz.PassMarkPercent%</td>
+                                <td class="num" data-label="Best score">@(quiz.BestScorePercent is int best ? $"{best}%" : "—")</td>
+                                <td data-label="Status">
+                                    @if (quiz.Passed)
+                                    {
+                                        <span class="badge-state badge-state--live">Passed</span>
+                                    }
+                                    else if (quiz.AttemptCount > 0)
+                                    {
+                                        <span class="badge-state badge-state--warn">@DisplayFormat.Plural(quiz.AttemptCount, "attempt"), not passed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-state badge-state--draft">Not attempted</span>
+                                    }
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <a class="btn btn-sm @(quiz.Passed ? "btn-outline-primary" : "btn-primary")" asp-action="Take" asp-route-id="@quiz.QuizId">
+                                        @(quiz.AttemptCount == 0 ? "Take quiz" : "Retake")<span class="visually-hidden"> @quiz.Title</span>
+                                    </a>
+                                    @if (quiz.LatestAttemptId is int latest)
+                                    {
+                                        <a class="btn btn-sm btn-link" asp-action="Result" asp-route-id="@latest">Last result<span class="visually-hidden"> for @quiz.Title</span></a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

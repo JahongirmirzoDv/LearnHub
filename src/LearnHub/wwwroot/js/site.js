@@ -135,6 +135,37 @@
         });
     }
 
+    // Home page sample question: instant feedback in the browser. Nothing is sent to the server or saved.
+    function initSampleQuestion() {
+        document.querySelectorAll("[data-sample-question]").forEach((panel) => {
+            const button = panel.querySelector("[data-sample-check]");
+            const feedback = panel.querySelector("[data-sample-feedback]");
+            const explanation = panel.querySelector("[data-sample-explanation]");
+            if (!button || !feedback) {
+                return;
+            }
+
+            button.addEventListener("click", () => {
+                const chosen = panel.querySelector("input[type=radio]:checked");
+                panel.querySelectorAll(".quiz-option").forEach((option) => option.classList.remove("is-correct", "is-wrong"));
+                if (!chosen) {
+                    feedback.className = "sample-feedback mt-3 mb-0";
+                    feedback.textContent = "Choose an answer first.";
+                    panel.querySelector("input[type=radio]")?.focus();
+                    return;
+                }
+
+                const correct = chosen.getAttribute("data-correct") === "true";
+                chosen.closest(".quiz-option")?.classList.add(correct ? "is-correct" : "is-wrong");
+                feedback.className = `sample-feedback mt-3 mb-0 ${correct ? "is-correct" : "is-wrong"}`;
+                feedback.textContent = correct ? "Correct." : "Not quite. Try another answer.";
+                if (explanation) {
+                    explanation.hidden = !correct;
+                }
+            });
+        });
+    }
+
     // Ask before quick destructive actions that have no separate confirmation page.
     function initConfirmations() {
         document.addEventListener("submit", (event) => {
@@ -196,6 +227,7 @@
         initPasswordMeters();
         initImagePreviews();
         initQuizzes();
+        initSampleQuestion();
         initConfirmations();
         initAutoSubmit();
         initResourceTypeFields();

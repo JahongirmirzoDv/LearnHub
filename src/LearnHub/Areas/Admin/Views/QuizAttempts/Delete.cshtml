@@ -22,7 +22,7 @@
             <h2>Delete this attempt?</h2>
             <p>
                 The attempt scored <strong>@Model.ScorePercent%</strong> and was submitted
-                <time data-local="datetime" datetime="@DisplayFormat.IsoDate(Model.SubmittedAt)">@DisplayFormat.DateAndTime(Model.SubmittedAt)</time>.
+                <time data-local="datetime" datetime="@DisplayFormat.IsoDate(Model.CompletedAt)">@DisplayFormat.DateAndTime(Model.CompletedAt)</time>.
                 If it was the student's only passing attempt, their course progress goes down. This can't be undone.
             </p>
             <div class="form-actions">

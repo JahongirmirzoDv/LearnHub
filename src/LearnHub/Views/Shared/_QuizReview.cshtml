@@ -5,11 +5,14 @@
     <div>
         <h2 class="h3 mb-2">@(Model.Passed ? "Passed" : "Not passed yet")</h2>
         <p class="mb-2">
-            @Model.CorrectCount of @Model.QuestionCount correct, which is @Model.ScorePercent%.
+            @Model.Score of @DisplayFormat.Plural(Model.MaxScore, "point") (@Model.CorrectCount of @Model.QuestionCount questions correct), which is @Model.ScorePercent%.
             The pass mark is @Model.PassMarkPercent%.
         </p>
         <p class="text-muted-lh small mb-0">
-            Submitted <time data-local="datetime" datetime="@DisplayFormat.IsoDate(Model.SubmittedAt)">@DisplayFormat.DateAndTime(Model.SubmittedAt)</time>
+            Submitted <time data-local="datetime" datetime="@DisplayFormat.IsoDate(Model.CompletedAt)">@DisplayFormat.DateAndTime(Model.CompletedAt)</time>@if (Model.TimeTaken is { } taken)
+            {
+                <text>, time taken @DisplayFormat.TimeTaken(taken)</text>
+            }
         </p>
     </div>
 </div>
@@ -30,7 +33,7 @@ else
         {
             <li class="review-question @(question.IsCorrect ? "is-correct" : "is-wrong")">
                 <p class="quiz-question-number mb-1">
-                    Question @question.Number:
+                    Question @question.Number (@DisplayFormat.Plural(question.Points, "point")):
                     <strong class="@(question.IsCorrect ? "text-success" : "text-danger")">
                         @(question.IsCorrect ? "correct" : question.WasAnswered ? "incorrect" : "not answered")
                     </strong>

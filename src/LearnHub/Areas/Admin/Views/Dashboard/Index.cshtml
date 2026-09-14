@@ -14,22 +14,51 @@
     </div>
 </div>
 
-<h2 class="visually-hidden">Key figures</h2>
-<dl class="stat-strip">
+<h2 class="visually-hidden">Totals</h2>
+<dl class="stat-strip stat-strip-6">
     <div>
-        <dt>Published courses</dt>
-        <dd class="stat-value">@Model.PublishedCourseCount</dd>
-        <dd class="stat-note">@DisplayFormat.Plural(Model.DraftCourseCount, "draft")</dd>
+        <dt>Users</dt>
+        <dd class="stat-value">@Model.UserCount</dd>
+        <dd class="stat-note">@DisplayFormat.Plural(Model.StudentCount, "student"), @DisplayFormat.Plural(Model.AdminCount, "admin")</dd>
     </div>
     <div>
-        <dt>Students</dt>
-        <dd class="stat-value">@Model.StudentCount</dd>
-        <dd class="stat-note">@Model.NewStudentsLast30Days new in 30 days</dd>
+        <dt>Courses</dt>
+        <dd class="stat-value">@Model.CourseCount</dd>
+        <dd class="stat-note">@Model.PublishedCourseCount published, @DisplayFormat.Plural(Model.DraftCourseCount, "draft")</dd>
+    </div>
+    <div>
+        <dt>Categories</dt>
+        <dd class="stat-value">@Model.CategoryCount</dd>
+        <dd class="stat-note"><a asp-controller="Categories" asp-action="Index">Manage</a></dd>
+    </div>
+    <div>
+        <dt>Resources</dt>
+        <dd class="stat-value">@Model.ResourceCount</dd>
+        <dd class="stat-note">@DisplayFormat.Plural(Model.DraftResourceCount, "draft")</dd>
     </div>
     <div>
         <dt>Enrolments</dt>
         <dd class="stat-value">@Model.EnrollmentCount</dd>
         <dd class="stat-note">@Model.EnrollmentsLast30Days in 30 days</dd>
+    </div>
+    <div>
+        <dt>Quizzes</dt>
+        <dd class="stat-value">@Model.QuizCount</dd>
+        <dd class="stat-note"><a asp-controller="Quizzes" asp-action="Index">Manage</a></dd>
+    </div>
+</dl>
+
+<h2 class="visually-hidden">Learner activity</h2>
+<dl class="stat-strip stat-strip-4">
+    <div>
+        <dt>New students</dt>
+        <dd class="stat-value">@Model.NewStudentsLast30Days</dd>
+        <dd class="stat-note">in the last 30 days</dd>
+    </div>
+    <div>
+        <dt>Course completions</dt>
+        <dd class="stat-value">@Model.CompletedEnrollmentCount</dd>
+        <dd class="stat-note">enrolments at 100%</dd>
     </div>
     <div>
         <dt>Quiz attempts</dt>

@@ -12,6 +12,13 @@ namespace LearnHub.ViewModels.Admin;
 
 public sealed class AdminDashboardViewModel
 {
+    /// <summary>Every registered account (students and administrators).</summary>
+    public int UserCount { get; init; }
+
+    public int AdminCount { get; init; }
+
+    public int CourseCount => PublishedCourseCount + DraftCourseCount;
+
     public int PublishedCourseCount { get; init; }
 
     public int DraftCourseCount { get; init; }
@@ -19,6 +26,8 @@ public sealed class AdminDashboardViewModel
     public int CategoryCount { get; init; }
 
     public int ResourceCount { get; init; }
+
+    public int DraftResourceCount { get; init; }
 
     public int QuizCount { get; init; }
 
@@ -29,6 +38,9 @@ public sealed class AdminDashboardViewModel
     public int EnrollmentCount { get; init; }
 
     public int EnrollmentsLast30Days { get; init; }
+
+    /// <summary>Enrolments whose course has been completed (stored progress reached 100%).</summary>
+    public int CompletedEnrollmentCount { get; init; }
 
     public int AttemptCount { get; init; }
 
@@ -51,7 +63,7 @@ public sealed class AdminDashboardViewModel
 
 public sealed record RecentEnrollmentItem(string StudentName, int CourseId, string CourseTitle, DateTime EnrolledAt);
 
-public sealed record RecentAttemptItem(int AttemptId, string StudentName, string QuizTitle, int ScorePercent, bool Passed, DateTime SubmittedAt);
+public sealed record RecentAttemptItem(int AttemptId, string StudentName, string QuizTitle, int ScorePercent, bool Passed, DateTime CompletedAt);
 
 public sealed record ChartBar(string Label, int Value, int PercentOfMax);
 
@@ -262,6 +274,7 @@ public sealed record AdminResourceListItem(
     string CourseTitle,
     int SortOrder,
     bool IsPreview,
+    bool IsPublished,
     int CompletionCount,
     DateTime UpdatedAt);
 
@@ -298,6 +311,11 @@ public sealed class ResourceFormViewModel : IValidatableObject
     [Display(Name = "Lesson content")]
     public string? Body { get; set; }
 
+    [StringLength(FieldLengths.ResourceBody, ErrorMessage = "The solution can be at most {1} characters.")]
+    [DataType(DataType.MultilineText)]
+    [Display(Name = "Solution (hidden until the student reveals it)")]
+    public string? Solution { get; set; }
+
     [StringLength(FieldLengths.Url, ErrorMessage = "The link can be at most {1} characters.")]
     [Display(Name = "Link")]
     public string? ExternalUrl { get; set; }
@@ -317,6 +335,9 @@ public sealed class ResourceFormViewModel : IValidatableObject
 
     [Display(Name = "Free preview (guests can open it without enrolling)")]
     public bool IsPreview { get; set; }
+
+    [Display(Name = "Published (students can see it and it counts towards progress)")]
+    public bool IsPublished { get; set; } = true;
 
     [BindNever]
     [ValidateNever]
@@ -339,6 +360,9 @@ public sealed class ResourceFormViewModel : IValidatableObject
             case ResourceType.Article when string.IsNullOrWhiteSpace(Body) || Body.Trim().Length < 50:
                 yield return new ValidationResult("Article lessons need at least 50 characters of content.", [nameof(Body)]);
                 break;
+            case ResourceType.Exercise when string.IsNullOrWhiteSpace(Body) || Body.Trim().Length < 20:
+                yield return new ValidationResult("Describe the exercise task in at least 20 characters.", [nameof(Body)]);
+                break;
             case ResourceType.Video when !VideoEmbedParser.TryParse(ExternalUrl, out _):
                 yield return new ValidationResult(
                     "Enter a full YouTube or Vimeo link, e.g. https://www.youtube.com/watch?v=abc123XYZ00.", [nameof(ExternalUrl)]);
@@ -349,6 +373,11 @@ public sealed class ResourceFormViewModel : IValidatableObject
             case ResourceType.Image when string.IsNullOrWhiteSpace(Summary):
                 yield return new ValidationResult("Describe the image in the summary so screen-reader users understand it.", [nameof(Summary)]);
                 break;
+        }
+
+        if (Type == ResourceType.Exercise && string.IsNullOrWhiteSpace(Solution))
+        {
+            yield return new ValidationResult("Add a solution so students can check their work.", [nameof(Solution)]);
         }
 
         if (RequiresFile && Id is null && UploadFile is null)

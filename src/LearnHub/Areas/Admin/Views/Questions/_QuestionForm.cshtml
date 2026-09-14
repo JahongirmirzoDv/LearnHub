@@ -36,15 +36,23 @@
     </fieldset>
 
     <div class="row g-3">
-        <div class="col-md-9">
+        <div class="col-md-8">
             <label asp-for="Explanation" class="form-label"></label>
             <textarea asp-for="Explanation" class="form-control" rows="2" data-char-counter></textarea>
             <span asp-validation-for="Explanation"></span>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-2">
+            <label asp-for="Points" class="form-label"></label>
+            <input asp-for="Points" class="form-control" min="1" max="100" aria-describedby="points-help" />
+            <span asp-validation-for="Points"></span>
+        </div>
+        <div class="col-6 col-md-2">
             <label asp-for="SortOrder" class="form-label"></label>
             <input asp-for="SortOrder" class="form-control" min="0" max="999" />
             <span asp-validation-for="SortOrder"></span>
+        </div>
+        <div class="col-12">
+            <p id="points-help" class="form-text mt-0">A correct answer earns all of the question's points. The quiz score is the percentage of points earned.</p>
         </div>
     </div>
 </div>

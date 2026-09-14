@@ -1,6 +1,7 @@
 using LearnHub.Data;
 using LearnHub.Models;
 using LearnHub.ViewModels.Admin;
+using LearnHub.ViewModels.Public;
 using LearnHub.ViewModels.Shared;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,9 @@ public interface ICategoryService
 
     /// <summary>Categories with their number of published courses (public catalogue filters).</summary>
     Task<IReadOnlyList<CategoryOption>> GetPublicOptionsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Every category with its description, number of published courses and up to three course titles.</summary>
+    Task<IReadOnlyList<CategoryCardViewModel>> GetPublicCategoriesAsync(CancellationToken cancellationToken = default);
 
     Task<CategoryFormViewModel?> GetForEditAsync(int id, CancellationToken cancellationToken = default);
 
@@ -38,6 +42,32 @@ public sealed class CategoryService(ApplicationDbContext db, ILogger<CategorySer
             .OrderBy(c => c.Name)
             .Select(c => new CategoryOption(c.Id, c.Name, c.IconName, c.Courses.Count(course => course.IsPublished)))
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<CategoryCardViewModel>> GetPublicCategoriesAsync(CancellationToken cancellationToken = default)
+    {
+        var categories = await db.Categories.AsNoTracking()
+            .OrderBy(c => c.Name)
+            .Select(c => new { c.Id, c.Name, c.Description, c.IconName })
+            .ToListAsync(cancellationToken);
+
+        // A flat query grouped in memory: a per-category Take would need SQL APPLY, which SQLite does not support.
+        var courses = await db.Courses.AsNoTracking()
+            .Where(c => c.IsPublished)
+            .OrderByDescending(c => c.Enrollments.Count).ThenBy(c => c.Title)
+            .Select(c => new { c.CategoryId, c.Title })
+            .ToListAsync(cancellationToken);
+        var coursesByCategory = courses.ToLookup(c => c.CategoryId, c => c.Title);
+
+        return categories
+            .Select(c => new CategoryCardViewModel(
+                c.Id,
+                c.Name,
+                c.Description,
+                c.IconName,
+                coursesByCategory[c.Id].Count(),
+                coursesByCategory[c.Id].Take(3).ToList()))
+            .ToList();
+    }
 
     public async Task<CategoryFormViewModel?> GetForEditAsync(int id, CancellationToken cancellationToken = default) =>
         await db.Categories.AsNoTracking()

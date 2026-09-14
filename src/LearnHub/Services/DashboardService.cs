@@ -12,6 +12,9 @@ public interface IDashboardService
     Task<StudentDashboardViewModel> GetStudentDashboardAsync(string userId, string fullName, CancellationToken cancellationToken = default);
 
     Task<AdminDashboardViewModel> GetAdminDashboardAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Per-course lesson and quiz progress for the student's Progress page.</summary>
+    Task<StudentProgressViewModel> GetProgressReportAsync(string userId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Builds dashboards exclusively from real database data – no placeholder KPIs.</summary>
@@ -29,7 +32,7 @@ public sealed class DashboardService(
         var enrolledIds = enrolled.Select(e => e.Course.Id).ToList();
 
         var availableCourseCount = await db.Courses.CountAsync(c => c.IsPublished && !enrolledIds.Contains(c.Id), cancellationToken);
-        var completedResourceCount = await db.ResourceCompletions.CountAsync(c => c.UserId == userId, cancellationToken);
+        var completedResourceCount = await db.ResourceCompletions.CountAsync(c => c.UserId == userId && c.LearningResource.IsPublished, cancellationToken);
 
         // Best score per quiz is a fairer summary than averaging every retry.
         var bestScores = history.Attempts
@@ -62,11 +65,7 @@ public sealed class DashboardService(
     {
         var since = clock.GetUtcNow().UtcDateTime.AddDays(-30);
 
-        var studentIds =
-            from userRole in db.UserRoles
-            join role in db.Roles on userRole.RoleId equals role.Id
-            where role.Name == AppRoles.Student
-            select userRole.UserId;
+        var studentIds = UserIdsInRole(AppRoles.Student);
 
         var attemptCount = await db.QuizAttempts.CountAsync(cancellationToken);
         var passedAttemptCount = await db.QuizAttempts.CountAsync(a => a.Passed, cancellationToken);
@@ -86,8 +85,8 @@ public sealed class DashboardService(
             .ToListAsync(cancellationToken);
 
         var courseWarnings = await db.Courses.AsNoTracking()
-            .Where(c => c.IsPublished && !c.Resources.Any())
-            .Select(c => new ContentWarning($"Published course \"{c.Title}\" has no learning resources.", "Resources", "Create", c.Id))
+            .Where(c => c.IsPublished && !c.Resources.Any(r => r.IsPublished))
+            .Select(c => new ContentWarning($"Published course \"{c.Title}\" has no published learning resources.", "Resources", "Create", c.Id))
             .ToListAsync(cancellationToken);
 
         var quizWarnings = await db.Quizzes.AsNoTracking()
@@ -97,15 +96,19 @@ public sealed class DashboardService(
 
         return new AdminDashboardViewModel
         {
+            UserCount = await db.Users.CountAsync(cancellationToken),
+            AdminCount = await UserIdsInRole(AppRoles.Admin).CountAsync(cancellationToken),
             PublishedCourseCount = await db.Courses.CountAsync(c => c.IsPublished, cancellationToken),
             DraftCourseCount = await db.Courses.CountAsync(c => !c.IsPublished, cancellationToken),
             CategoryCount = await db.Categories.CountAsync(cancellationToken),
             ResourceCount = await db.LearningResources.CountAsync(cancellationToken),
+            DraftResourceCount = await db.LearningResources.CountAsync(r => !r.IsPublished, cancellationToken),
             QuizCount = await db.Quizzes.CountAsync(cancellationToken),
             StudentCount = await studentIds.CountAsync(cancellationToken),
             NewStudentsLast30Days = await db.Users.CountAsync(u => u.CreatedAt >= since && studentIds.Contains(u.Id), cancellationToken),
             EnrollmentCount = await db.Enrollments.CountAsync(cancellationToken),
             EnrollmentsLast30Days = await db.Enrollments.CountAsync(e => e.EnrolledAt >= since, cancellationToken),
+            CompletedEnrollmentCount = await db.Enrollments.CountAsync(e => e.CompletedAt != null, cancellationToken),
             AttemptCount = attemptCount,
             AverageScorePercent = averageScore is null ? null : (int)Math.Round(averageScore.Value),
             PassRatePercent = attemptCount == 0 ? null : (int)Math.Round(passedAttemptCount * 100.0 / attemptCount),
@@ -116,15 +119,60 @@ public sealed class DashboardService(
                 .Select(e => new RecentEnrollmentItem(e.User.FullName, e.CourseId, e.Course.Title, e.EnrolledAt))
                 .ToListAsync(cancellationToken),
             RecentAttempts = await db.QuizAttempts.AsNoTracking()
-                .OrderByDescending(a => a.SubmittedAt)
+                .OrderByDescending(a => a.CompletedAt)
                 .Take(6)
-                .Select(a => new RecentAttemptItem(a.Id, a.User.FullName, a.Quiz.Title, a.ScorePercent, a.Passed, a.SubmittedAt))
+                .Select(a => new RecentAttemptItem(a.Id, a.User.FullName, a.Quiz.Title, a.ScorePercent, a.Passed, a.CompletedAt))
                 .ToListAsync(cancellationToken),
             PopularCourses = ToBars(popular.Select(p => (p.Title, p.Count))),
             EnrollmentsByCategory = ToBars(byCategory.Select(c => (c.Name, c.Count))),
             ContentWarnings = courseWarnings.Concat(quizWarnings).ToList()
         };
     }
+
+    public async Task<StudentProgressViewModel> GetProgressReportAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var courses = await db.Enrollments.AsNoTracking()
+            .Where(e => e.UserId == userId && e.Course.IsPublished)
+            .OrderByDescending(e => e.LastAccessedAt ?? e.EnrolledAt)
+            .Select(e => new
+            {
+                e.CourseId,
+                CourseTitle = e.Course.Title,
+                e.Course.CategoryId,
+                CategoryName = e.Course.Category.Name,
+                e.EnrolledAt,
+                e.CompletedAt,
+                LessonsTotal = e.Course.Resources.Count(r => r.IsPublished),
+                LessonsCompleted = e.Course.Resources.Count(r => r.IsPublished && r.Completions.Any(done => done.UserId == userId))
+            })
+            .ToListAsync(cancellationToken);
+
+        var quizzesByCourse = (await quizzes.GetOverviewAsync(userId, cancellationToken)).Quizzes.ToLookup(q => q.CourseId);
+
+        return new StudentProgressViewModel
+        {
+            Courses = courses
+                .Select(c => new CourseProgressReport
+                {
+                    CourseId = c.CourseId,
+                    CourseTitle = c.CourseTitle,
+                    CategoryId = c.CategoryId,
+                    CategoryName = c.CategoryName,
+                    EnrolledAt = c.EnrolledAt,
+                    CompletedAt = c.CompletedAt,
+                    LessonsCompleted = c.LessonsCompleted,
+                    LessonsTotal = c.LessonsTotal,
+                    Quizzes = quizzesByCourse[c.CourseId].ToList()
+                })
+                .ToList()
+        };
+    }
+
+    private IQueryable<string> UserIdsInRole(string roleName) =>
+        from userRole in db.UserRoles
+        join role in db.Roles on userRole.RoleId equals role.Id
+        where role.Name == roleName
+        select userRole.UserId;
 
     private async Task<IReadOnlyList<ActivityItem>> GetRecentActivityAsync(string userId, CancellationToken cancellationToken)
     {
@@ -146,9 +194,9 @@ public sealed class DashboardService(
 
         var attemptEvents = await db.QuizAttempts.AsNoTracking()
             .Where(a => a.UserId == userId)
-            .OrderByDescending(a => a.SubmittedAt)
+            .OrderByDescending(a => a.CompletedAt)
             .Take(take)
-            .Select(a => new { When = a.SubmittedAt, a.Id, a.Quiz.Title, a.ScorePercent, a.Passed })
+            .Select(a => new { When = a.CompletedAt, a.Id, a.Quiz.Title, a.ScorePercent, a.Passed })
             .ToListAsync(cancellationToken);
 
         return enrolledEvents

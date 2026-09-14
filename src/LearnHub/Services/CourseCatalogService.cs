@@ -48,23 +48,35 @@ public sealed class CourseCatalogService(
             Categories = await categories.GetPublicOptionsAsync(cancellationToken),
             PublishedCourseCount = await published.CountAsync(cancellationToken),
             LearnerCount = learnerCount,
-            ResourceCount = await db.LearningResources.CountAsync(r => r.Course.IsPublished, cancellationToken),
-            QuizCount = await db.Quizzes.CountAsync(q => q.IsPublished && q.Questions.Any() && q.Course.IsPublished, cancellationToken)
+            ResourceCount = await db.LearningResources.CountAsync(r => r.IsPublished && r.Course.IsPublished, cancellationToken),
+            QuizCount = await db.Quizzes.CountAsync(q => q.IsPublished && q.Questions.Any() && q.Course.IsPublished, cancellationToken),
+            LessonFormats = await db.LearningResources.AsNoTracking()
+                .Where(r => r.IsPublished && r.Course.IsPublished)
+                .GroupBy(r => r.Type)
+                .Select(group => new LessonFormatCount(group.Key, group.Count()))
+                .ToListAsync(cancellationToken),
+            PreviewLesson = await db.LearningResources.AsNoTracking()
+                .Where(r => r.IsPreview && r.IsPublished && r.Course.IsPublished)
+                .OrderByDescending(r => r.Course.Enrollments.Count).ThenBy(r => r.SortOrder)
+                .Select(r => new PreviewLessonLink(r.Id, r.Title, r.Course.Title))
+                .FirstOrDefaultAsync(cancellationToken)
         };
     }
 
     public async Task<CourseListViewModel> SearchAsync(CourseSearchQuery query, string? userId, CancellationToken cancellationToken = default)
     {
         var courses = db.Courses.AsNoTracking().Where(c => c.IsPublished);
+        var pattern = string.IsNullOrWhiteSpace(query.Q) ? null : SearchPattern.Contains(query.Q);
 
-        if (!string.IsNullOrWhiteSpace(query.Q))
+        if (pattern is not null)
         {
-            var pattern = SearchPattern.Contains(query.Q);
             courses = courses.Where(c =>
                 EF.Functions.Like(c.Title, pattern, SearchPattern.EscapeCharacter)
                 || EF.Functions.Like(c.ShortDescription, pattern, SearchPattern.EscapeCharacter)
+                || EF.Functions.Like(c.Description, pattern, SearchPattern.EscapeCharacter)
                 || EF.Functions.Like(c.InstructorName, pattern, SearchPattern.EscapeCharacter)
-                || EF.Functions.Like(c.Category.Name, pattern, SearchPattern.EscapeCharacter));
+                || EF.Functions.Like(c.Category.Name, pattern, SearchPattern.EscapeCharacter)
+                || c.Resources.Any(r => r.IsPublished && EF.Functions.Like(r.Title, pattern, SearchPattern.EscapeCharacter)));
         }
 
         if (query.CategoryId is int categoryId)
@@ -90,6 +102,11 @@ public sealed class CourseCatalogService(
             .ToPagedResultAsync(query.Page, PageSize, cancellationToken);
         await progress.AttachAsync(results.Items, userId, cancellationToken);
 
+        if (pattern is not null && results.Items.Count > 0)
+        {
+            await AttachMatchingLessonsAsync(results.Items, pattern, cancellationToken);
+        }
+
         query.Page = results.Page;
         return new CourseListViewModel
         {
@@ -97,6 +114,24 @@ public sealed class CourseCatalogService(
             Results = results,
             Categories = await categories.GetPublicOptionsAsync(cancellationToken)
         };
+    }
+
+    /// <summary>Shows which lessons matched, so a result found through a lesson title is not a mystery.</summary>
+    private async Task AttachMatchingLessonsAsync(IReadOnlyList<CourseCardViewModel> cards, string pattern, CancellationToken cancellationToken)
+    {
+        const int maxPerCourse = 3;
+        var courseIds = cards.Select(card => card.Id).ToList();
+        var lessons = await db.LearningResources.AsNoTracking()
+            .Where(r => courseIds.Contains(r.CourseId) && r.IsPublished && EF.Functions.Like(r.Title, pattern, SearchPattern.EscapeCharacter))
+            .OrderBy(r => r.SortOrder).ThenBy(r => r.Id)
+            .Select(r => new { r.CourseId, r.Title })
+            .ToListAsync(cancellationToken);
+
+        var byCourse = lessons.ToLookup(lesson => lesson.CourseId, lesson => lesson.Title);
+        foreach (var card in cards)
+        {
+            card.MatchingLessons = byCourse[card.Id].Take(maxPerCourse).ToList();
+        }
     }
 
     public async Task<CourseDetailsViewModel?> GetDetailsAsync(int id, string? userId, bool isAdmin, CancellationToken cancellationToken = default)
@@ -131,7 +166,7 @@ public sealed class CourseCatalogService(
         course.IsAdminView = isAdmin;
 
         course.Resources = await db.LearningResources.AsNoTracking()
-            .Where(r => r.CourseId == id)
+            .Where(r => r.CourseId == id && (r.IsPublished || isAdmin))
             .OrderBy(r => r.SortOrder).ThenBy(r => r.Id)
             .Select(r => new CourseResourceItem
             {
@@ -141,6 +176,7 @@ public sealed class CourseCatalogService(
                 Type = r.Type,
                 EstimatedMinutes = r.EstimatedMinutes,
                 IsPreview = r.IsPreview,
+                IsPublished = r.IsPublished,
                 IsCompleted = r.Completions.Any(done => done.UserId == userId)
             })
             .ToListAsync(cancellationToken);
@@ -172,11 +208,12 @@ public sealed class CourseCatalogService(
             {
                 course.IsEnrolled = true;
                 course.EnrolledAt = enrolledAt;
-                // Same definition as ProgressService, derived from the rows already loaded.
+                // Same definition as ProgressService, derived from the rows already loaded (drafts never count).
+                var lessons = course.Resources.Where(r => r.IsPublished).ToList();
                 course.Progress = new CourseProgress(
-                    course.Resources.Count(r => r.IsCompleted) + course.Quizzes.Count(q => q.HasPassed),
-                    course.Resources.Count + course.Quizzes.Count);
-                course.NextResourceId = (course.Resources.FirstOrDefault(r => !r.IsCompleted) ?? course.Resources.FirstOrDefault())?.Id;
+                    lessons.Count(r => r.IsCompleted) + course.Quizzes.Count(q => q.HasPassed),
+                    lessons.Count + course.Quizzes.Count);
+                course.NextResourceId = (lessons.FirstOrDefault(r => !r.IsCompleted) ?? lessons.FirstOrDefault())?.Id;
             }
         }
 

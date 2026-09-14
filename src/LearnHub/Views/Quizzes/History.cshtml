@@ -47,7 +47,7 @@
                             <tr>
                                 <td><strong>@attempt.QuizTitle</strong></td>
                                 <td><a asp-controller="Courses" asp-action="Details" asp-route-id="@attempt.CourseId">@attempt.CourseTitle</a></td>
-                                <td><time data-local="datetime" datetime="@DisplayFormat.IsoDate(attempt.SubmittedAt)">@DisplayFormat.DateAndTime(attempt.SubmittedAt)</time></td>
+                                <td><time data-local="datetime" datetime="@DisplayFormat.IsoDate(attempt.CompletedAt)">@DisplayFormat.DateAndTime(attempt.CompletedAt)</time></td>
                                 <td class="text-end">
                                     <span class="score-pill @(attempt.Passed ? "is-passed" : null)">@attempt.ScorePercent%</span>
                                     <span class="visually-hidden">@(attempt.Passed ? "passed" : "not passed")</span>

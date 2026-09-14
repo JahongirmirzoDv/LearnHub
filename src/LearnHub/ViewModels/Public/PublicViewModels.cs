@@ -30,7 +30,17 @@ public sealed class HomeViewModel
     public int ResourceCount { get; init; }
 
     public int QuizCount { get; init; }
+
+    /// <summary>Published lessons per format (article, video, PDF …), for the "every kind of lesson" section.</summary>
+    public IReadOnlyList<LessonFormatCount> LessonFormats { get; init; } = [];
+
+    /// <summary>A free preview lesson anyone can open, or null when no course has one.</summary>
+    public PreviewLessonLink? PreviewLesson { get; init; }
 }
+
+public sealed record LessonFormatCount(ResourceType Type, int Count);
+
+public sealed record PreviewLessonLink(int ResourceId, string Title, string CourseTitle);
 
 public sealed class ContactViewModel
 {
@@ -77,8 +87,9 @@ public enum CourseSort
 /// <summary>Query-string model for <c>/Courses</c>; every value is optional.</summary>
 public sealed class CourseSearchQuery
 {
+    /// <summary>Matched against course titles and descriptions, instructors, category names and published lesson titles.</summary>
     [StringLength(SearchPattern.MaxTermLength)]
-    [Display(Name = "Search courses")]
+    [Display(Name = "Search courses and lessons")]
     public string? Q { get; set; }
 
     [Display(Name = "Category")]
@@ -102,6 +113,10 @@ public sealed class CourseSearchQuery
         ["sort"] = Sort == CourseSort.Newest ? null : Sort.ToString()
     };
 }
+
+/// <summary>A category on the public Categories page, with a few of its published courses as a preview.</summary>
+public sealed record CategoryCardViewModel(
+    int Id, string Name, string? Description, string IconName, int CourseCount, IReadOnlyList<string> ExampleCourseTitles);
 
 public sealed class CourseListViewModel
 {
@@ -177,6 +192,9 @@ public sealed class CourseResourceItem
     public int? EstimatedMinutes { get; init; }
 
     public bool IsPreview { get; init; }
+
+    /// <summary>Drafts appear in the outline for administrators only.</summary>
+    public bool IsPublished { get; init; }
 
     public bool IsCompleted { get; set; }
 }

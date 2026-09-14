@@ -76,6 +76,10 @@ else
                                 </span>
                                 <span>@enrollment.ProgressPercent%</span>
                             </span>
+                            @if (enrollment.CompletedAt is DateTime completedAt)
+                            {
+                                <span class="cell-sub">Completed <time data-local datetime="@DisplayFormat.IsoDate(completedAt)">@DisplayFormat.Date(completedAt)</time></span>
+                            }
                         </td>
                         <td data-label="Enrolled"><time data-local datetime="@DisplayFormat.IsoDate(enrollment.EnrolledAt)">@DisplayFormat.Date(enrollment.EnrolledAt)</time></td>
                         <td data-label="Last studied">

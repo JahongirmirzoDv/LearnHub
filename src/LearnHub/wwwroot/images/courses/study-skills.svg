@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+  <defs>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.6" fill="#1b2438" fill-opacity="0.08"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="#e9ecf1"/>
+  <rect width="640" height="360" fill="url(#dots)"/>
+  <path d="M -30 290 H 160 L 270 180 H 680" fill="none" stroke="#4b5a73" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="82" cy="290" r="15" fill="#ffffff" stroke="#4b5a73" stroke-width="9"/>
+  <circle cx="616" cy="180" r="15" fill="#ffffff" stroke="#4b5a73" stroke-width="9"/>
+  <rect x="370" y="70" width="220" height="220" rx="30" fill="#ffffff" stroke="#1b2438" stroke-width="10"/>
+  <path d="M 440 165 A 40 40 0 1 1 520 165 C 520 192 504 203 499 220 H 461 C 456 203 440 192 440 165 Z" fill="#ffffff" stroke="#1b2438" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M 466 176 L 480 194 L 494 176" fill="none" stroke="#4b5a73" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 462 240 H 498 M 469 256 H 491" fill="none" stroke="#1b2438" stroke-width="10" stroke-linecap="round"/>
+</svg>

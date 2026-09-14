@@ -5,6 +5,7 @@ using LearnHub.Models;
 using LearnHub.Services;
 using LearnHub.Services.Storage;
 using LearnHub.ViewModels.Account;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -57,6 +58,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddLearnHubApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
+        services.AddSingleton<IPostConfigureOptions<SeedOptions>, DevelopmentSeedPasswords>();
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<SiteOptions>(configuration.GetSection(SiteOptions.SectionName));
 
@@ -133,7 +135,30 @@ public static class ServiceCollectionExtensions
 
         services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 
+        // Data Protection keys encrypt the sign-in and anti-forgery cookies. In a container they must live on
+        // persistent storage (DataProtection__KeysPath=/data/keys), or every redeployment signs everybody out.
+        var dataProtection = services.AddDataProtection().SetApplicationName("LearnHub");
+        var keysPath = configuration["DataProtection:KeysPath"];
+        if (!string.IsNullOrWhiteSpace(keysPath))
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(Path.GetFullPath(keysPath, environment.ContentRootPath)));
+        }
+
         return services;
+    }
+
+    /// <summary>
+    /// Platforms such as Railway choose the port at run time and pass it in the <c>PORT</c> variable; the app must
+    /// listen on it on every network interface. Without <c>PORT</c> the usual ASP.NET Core URL settings apply.
+    /// </summary>
+    public static WebApplicationBuilder UsePlatformPort(this WebApplicationBuilder builder)
+    {
+        if (int.TryParse(builder.Configuration["PORT"], out var port) && port is > 0 and <= 65535)
+        {
+            builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+        }
+
+        return builder;
     }
 
     private static CookieSecurePolicy SecurePolicy(IHostEnvironment environment) =>

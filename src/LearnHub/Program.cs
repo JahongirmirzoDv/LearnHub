@@ -4,6 +4,7 @@ using LearnHub.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.UsePlatformPort();
 builder.Services
     .AddLearnHubDatabase(builder.Configuration, builder.Environment)
     .AddLearnHubIdentity(builder.Environment)
@@ -13,6 +14,9 @@ builder.Services
 var app = builder.Build();
 
 // HTTP request pipeline – order matters.
+// Proxy headers come first so every later component sees the real scheme and client address.
+app.UsePlatformProxyHeaders();
+
 if (!app.Environment.IsDevelopment())
 {
     // Friendly error page instead of a stack trace; HSTS tells browsers to always use HTTPS.

@@ -17,12 +17,12 @@
             </ol>
         </nav>
         <h1>Courses</h1>
-        <p>Search by topic or instructor, then narrow the list by category and level.</p>
+        <p>Search course titles, descriptions, categories and lesson titles, then narrow the list by category and level.</p>
         <form class="hero-search mt-3" role="search" method="get" asp-action="Index">
             <i class="bi bi-search" aria-hidden="true"></i>
-            <label for="q" class="visually-hidden">Search courses</label>
+            <label for="q" class="visually-hidden">Search courses and lessons</label>
             <input id="q" name="q" type="search" class="form-control" value="@query.Q" maxlength="100"
-                   placeholder="Search by title, topic or instructor" />
+                   placeholder="Search by title, topic, lesson or category" />
             @if (query.CategoryId is not null)
             {
                 <input type="hidden" name="categoryId" value="@query.CategoryId" />
