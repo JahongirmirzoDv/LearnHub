@@ -5,11 +5,12 @@
 #
 # Usage:  scripts/smoke-test.sh <base-url>
 #   e.g.  scripts/smoke-test.sh http://localhost:5080
-#         SMOKE_WAIT_SECONDS=300 scripts/smoke-test.sh https://<app-name>.azurewebsites.net
+#         SMOKE_WAIT_SECONDS=300 scripts/smoke-test.sh https://<service>.up.railway.app
 #
-# SMOKE_FORWARDED_PROTO=https sends X-Forwarded-Proto, imitating a TLS-terminating proxy such as Azure App Service's
-# front end. Use it when calling a Production instance over plain HTTP that has ASPNETCORE_FORWARDEDHEADERS_ENABLED=true;
-# without it, Production refuses form pages because their antiforgery cookie is Secure-only.
+# SMOKE_FORWARDED_PROTO=https sends X-Forwarded-Proto, imitating the TLS-terminating proxy in front of the
+# container on Railway. Send it when calling a Production instance over plain HTTP: the application reads the
+# header (UsePlatformProxyHeaders), and without it Production refuses form pages because their antiforgery
+# cookie is Secure-only.
 set -euo pipefail
 
 base="${1:?Usage: $0 <base-url>}"
@@ -45,7 +46,7 @@ fail() {
   failures=$((failures + 1))
 }
 
-# A cold start (or Azure SQL resuming from auto-pause) can take a while, so wait for the health check first.
+# A cold start applies the migrations and seeds the catalogue, so wait for the health check first.
 deadline=$((SECONDS + wait_seconds))
 until [ "$(request /health)" = "200" ]; do
   if [ "$SECONDS" -ge "$deadline" ]; then

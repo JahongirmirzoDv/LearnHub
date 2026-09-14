@@ -1,0 +1,21 @@
+# Keeps the build context small and, more importantly, keeps local secrets and state out of the image:
+# App_Data holds the development SQLite database and the generated demo credentials file.
+**/bin/
+**/obj/
+**/App_Data/
+**/TestResults/
+.vs/
+.vscode/
+.idea/
+.git/
+.gitignore
+.github/
+tests/
+FirebaseLanding/
+docs/
+*.user
+*.suo
+*.md
+.env
+.env.*
+.DS_Store

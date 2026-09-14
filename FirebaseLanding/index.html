@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LearnHub | Web-based learning management system</title>
+    <meta name="description" content="LearnHub is an ASP.NET Core MVC learning management system built for the APU CT050-3-2-WAPP Web Applications group assignment: course catalogue, lessons, quizzes, progress tracking and an administration area, deployed on Railway.">
+    <meta name="theme-color" content="#1b2438">
+    <link rel="canonical" href="https://learnhub-wapp.web.app/">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="assets/fonts/overpass-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="assets/site.css">
+
+    <!-- Open Graph and Twitter cards, so a shared link shows a title, a description and the home page screenshot. -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="LearnHub">
+    <meta property="og:title" content="LearnHub | Web-based learning management system">
+    <meta property="og:description" content="An ASP.NET Core MVC learning management system: browse courses as a guest, enrol as a student, take quizzes and track progress, with a full administration area.">
+    <meta property="og:url" content="https://learnhub-wapp.web.app/">
+    <meta property="og:image" content="https://learnhub-wapp.web.app/assets/screens/home-desktop.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="LearnHub | Web-based learning management system">
+    <meta name="twitter:description" content="An ASP.NET Core MVC learning management system built for the APU CT050-3-2-WAPP Web Applications group assignment.">
+    <meta name="twitter:image" content="https://learnhub-wapp.web.app/assets/screens/home-desktop.png">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+    <div class="wrap header-row">
+        <a class="brand" href="#top" aria-label="LearnHub project home">
+            <svg class="brand-mark" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
+                <path d="M3 9 H10 L17 17" fill="none" stroke="#c9344a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M31 9 H24 L17 17" fill="none" stroke="#157f8e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M17 31 V17" fill="none" stroke="#2865c9" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="17" cy="17" r="7" fill="#ffffff" stroke="#1b2438" stroke-width="3.5"/>
+                <circle cx="17" cy="17" r="2.6" fill="#ffc53d"/>
+            </svg>
+            LearnHub
+        </a>
+        <nav class="site-nav" aria-label="Page sections">
+            <a href="#lines">Features</a>
+            <a href="#screens">Screens</a>
+            <a href="#build">Architecture</a>
+            <a href="#data">Data model</a>
+            <a href="#quality">Quality</a>
+            <a href="#team">Team</a>
+        </nav>
+        <!-- The Railway address is the one value to change after your first deploy: scripts/set-app-url.sh rewrites it. -->
+        <a class="button button-small button-signal header-cta" href="https://learnhub-production.up.railway.app">Open Learning System</a>
+    </div>
+</header>
+
+<main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="wrap hero-grid">
+            <div>
+                <p class="hero-context">APU CT050-3-2-WAPP Web Applications group assignment</p>
+                <h1 id="hero-title">LearnHub</h1>
+                <p class="hero-lead">
+                    A web-based learning system where students browse computing courses, enrol, work through lessons,
+                    take quizzes and follow their progress, while administrators run the whole catalogue. Guests can
+                    search and preview everything without an account.
+                </p>
+                <div class="button-row">
+                    <a class="button button-signal" href="https://learnhub-production.up.railway.app">Open Learning System</a>
+                    <a class="button" href="https://github.com/JahongirmirzoDv/LearnHub">View Source on GitHub</a>
+                    <a class="button" href="https://github.com/JahongirmirzoDv/LearnHub/tree/main/docs">Documentation</a>
+                </div>
+                <dl class="hero-facts">
+                    <div><dt>Courses in the demo catalogue</dt><dd>12</dd></div>
+                    <div><dt>Lessons, videos and PDF references</dt><dd>64</dd></div>
+                    <div><dt>Automated tests on every push</dt><dd>211</dd></div>
+                </dl>
+            </div>
+
+            <figure class="hero-map">
+                <svg class="interchange-map" viewBox="0 0 600 440" role="img" aria-labelledby="map-title">
+                    <title id="map-title">Course categories drawn as transit lines meeting at the LearnHub hub</title>
+                    <g class="map-line line-teal"><path d="M 36 96 H 170 L 300 220" pathLength="1"/><circle class="map-stop" cx="170" cy="96" r="9"/><circle class="map-terminus" cx="36" cy="96" r="13"/><text x="36" y="58">Web Development<tspan class="map-count" x="36" dy="18">3 courses</tspan></text></g>
+                    <g class="map-line line-red"><path d="M 564 96 H 430 L 300 220" pathLength="1"/><circle class="map-stop" cx="430" cy="96" r="9"/><circle class="map-terminus" cx="564" cy="96" r="13"/><text x="564" y="58" text-anchor="end">Programming<tspan class="map-count" x="564" dy="18">2 courses</tspan></text></g>
+                    <g class="map-line line-blue"><path d="M 36 220 H 300" pathLength="1"/><circle class="map-stop" cx="160" cy="220" r="9"/><circle class="map-terminus" cx="36" cy="220" r="13"/><text x="36" y="182">Software Engineering<tspan class="map-count" x="36" dy="18">2 courses</tspan></text></g>
+                    <g class="map-line line-orange"><path d="M 564 220 H 300" pathLength="1"/><circle class="map-stop" cx="440" cy="220" r="9"/><circle class="map-terminus" cx="564" cy="220" r="13"/><text x="564" y="182" text-anchor="end">Cybersecurity<tspan class="map-count" x="564" dy="18">1 course</tspan></text></g>
+                    <g class="map-line line-purple"><path d="M 36 344 H 170 L 300 220" pathLength="1"/><circle class="map-stop" cx="170" cy="344" r="9"/><circle class="map-terminus" cx="36" cy="344" r="13"/><text x="36" y="382">Database<tspan class="map-count" x="36" dy="18">1 course</tspan></text></g>
+                    <g class="map-line line-green"><path d="M 564 344 H 430 L 300 220" pathLength="1"/><circle class="map-stop" cx="430" cy="344" r="9"/><circle class="map-terminus" cx="564" cy="344" r="13"/><text x="564" y="382" text-anchor="end">Networking<tspan class="map-count" x="564" dy="18">1 course</tspan></text></g>
+                    <g><rect class="map-hub-ring" x="232" y="192" width="136" height="56" rx="28"/><text class="map-hub-label" x="300" y="226" text-anchor="middle">LearnHub</text></g>
+                </svg>
+                <figcaption>The home page draws every category as a line into the hub, the idea behind the whole interface.</figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <section class="section" id="lines" aria-labelledby="lines-title">
+        <div class="wrap">
+            <div class="section-head">
+                <h2 id="lines-title">Three lines, one hub</h2>
+                <p>Each kind of user travels a different route through LearnHub. Every stop below is a working part of the application.</p>
+            </div>
+
+            <ol class="route-list">
+                <li class="route line-blue">
+                    <h3>Guest</h3>
+                    <ul>
+                        <li>Home page with the category map</li>
+                        <li>Search, filter and sort the catalogue</li>
+                        <li>Course details and course route</li>
+                        <li>Free preview lessons</li>
+                        <li>Register and log in</li>
+                        <li>About and contact form</li>
+                    </ul>
+                </li>
+                <li class="route line-teal">
+                    <h3>Student</h3>
+                    <ul>
+                        <li>Dashboard with progress and activity</li>
+                        <li>Enrol in or leave courses</li>
+                        <li>Articles, videos, PDFs and images</li>
+                        <li>Mark lessons complete</li>
+                        <li>Take quizzes with instant marking</li>
+                        <li>Answer review and result history</li>
+                        <li>Profile and password change</li>
+                    </ul>
+                </li>
+                <li class="route line-red">
+                    <h3>Administrator</h3>
+                    <ul>
+                        <li>Dashboard with live figures</li>
+                        <li>Courses, categories and resources</li>
+                        <li>Validated file uploads</li>
+                        <li>Quizzes, questions and answers</li>
+                        <li>Users, roles and enrolments</li>
+                        <li>Quiz results and contact inbox</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="section section-paper" id="screens" aria-labelledby="screens-title">
+        <div class="wrap">
+            <div class="section-head">
+                <h2 id="screens-title">Screens from the running application</h2>
+                <p>Captured by the Playwright browser tests, on a desktop browser and on a phone-sized screen.</p>
+            </div>
+
+            <div class="screen-grid">
+                <figure class="screen screen-wide">
+                    <img src="assets/screens/home-desktop.png" width="1200" height="750" loading="lazy" alt="LearnHub home page with the headline, course search and the category map">
+                    <figcaption>Home page: search and the category map</figcaption>
+                </figure>
+                <figure class="screen screen-phone">
+                    <img src="assets/screens/home-mobile.png" width="412" height="840" loading="lazy" alt="LearnHub home page on a phone, with category links instead of the map">
+                    <figcaption>The same page on a phone</figcaption>
+                </figure>
+                <figure class="screen">
+                    <img src="assets/screens/course-desktop.png" width="1200" height="750" loading="lazy" alt="Course details page showing the course route with a free preview lesson and locked lessons">
+                    <figcaption>Course details with its lesson route</figcaption>
+                </figure>
+                <figure class="screen">
+                    <img src="assets/screens/lesson-desktop.png" width="1200" height="750" loading="lazy" alt="Lesson page with the course outline beside an article containing code examples">
+                    <figcaption>Lesson player with the course outline</figcaption>
+                </figure>
+                <figure class="screen">
+                    <img src="assets/screens/student-dashboard-desktop.png" width="1200" height="750" loading="lazy" alt="Student dashboard with learning figures, courses in progress and recent activity">
+                    <figcaption>Student dashboard</figcaption>
+                </figure>
+                <figure class="screen">
+                    <img src="assets/screens/quiz-result-desktop.png" width="1200" height="750" loading="lazy" alt="Quiz result showing a full score and an explanation for every answer">
+                    <figcaption>Quiz result with explained answers</figcaption>
+                </figure>
+                <figure class="screen">
+                    <img src="assets/screens/admin-dashboard-desktop.png" width="1200" height="750" loading="lazy" alt="Administration dashboard with catalogue figures and enrolment charts">
+                    <figcaption>Administration dashboard</figcaption>
+                </figure>
+                <figure class="screen">
+                    <img src="assets/screens/admin-courses-desktop.png" width="1200" height="750" loading="lazy" alt="Administration course list with filters, publishing status and edit and delete actions">
+                    <figcaption>Course management</figcaption>
+                </figure>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="build" aria-labelledby="build-title">
+        <div class="wrap">
+            <div class="section-head">
+                <h2 id="build-title">How it is built</h2>
+                <p>A server-rendered ASP.NET Core MVC application. Controllers stay thin, services hold the rules, and Entity Framework Core talks to the database.</p>
+            </div>
+
+            <div class="build-grid">
+                <div class="diagram">
+                    <pre class="mermaid" aria-label="Architecture diagram">
+flowchart TD
+    browser["Browser<br/>Razor views, Bootstrap 5, jQuery Validation"]
+    firebase["Firebase Hosting<br/>this project presentation site"]
+    proxy["Railway edge proxy<br/>TLS termination, X-Forwarded-Proto"]
+    pipeline["Middleware<br/>proxy headers, security headers, rate limits, authentication"]
+    identity["ASP.NET Core Identity<br/>Admin and Student roles"]
+    controllers["MVC controllers<br/>public site, student pages, Admin area"]
+    services["Services<br/>catalogue, enrolment, progress, grading"]
+    ef["Entity Framework Core 10"]
+    storage["Private file storage<br/>validated uploads"]
+    volume[("Railway volume /data<br/>SQLite, key ring, uploads")]
+    browser -->|HTTPS| firebase
+    browser -->|HTTPS| proxy
+    proxy --> pipeline
+    identity --- pipeline
+    pipeline --> controllers
+    controllers --> services
+    services --> ef
+    services --> storage
+    ef --> volume
+    storage --> volume
+                    </pre>
+                </div>
+
+                <dl class="stack-list">
+                    <div><dt>Application</dt><dd>ASP.NET Core MVC on .NET 10 (LTS), C#, Razor views</dd></div>
+                    <div><dt>Data</dt><dd>Entity Framework Core 10 with SQLite and code-first migrations; the database file lives on a Railway volume</dd></div>
+                    <div><dt>Security</dt><dd>ASP.NET Core Identity with roles, antiforgery on every form, Content Security Policy, rate-limited forms, account lockout</dd></div>
+                    <div><dt>Interface</dt><dd>Bootstrap 5.3 with a custom design system, Overpass typeface, client and server validation</dd></div>
+                    <div><dt>Testing</dt><dd>xUnit v3 with WebApplicationFactory, Playwright browser tests on three screen sizes</dd></div>
+                    <div><dt>Delivery</dt><dd>GitHub for source control, GitHub Actions for CI, Railway for the application, Firebase Hosting for this site</dd></div>
+                </dl>
+            </div>
+        </div>
+    </section>
+
+    <section class="section section-paper" id="data" aria-labelledby="data-title">
+        <div class="wrap">
+            <div class="section-head">
+                <h2 id="data-title">Data model</h2>
+                <p>Eleven application tables plus the ASP.NET Core Identity tables. Unique indexes stop duplicate enrolments and answers, and delete rules protect quiz history.</p>
+            </div>
+
+            <div class="diagram diagram-erd">
+                <pre class="mermaid" aria-label="Entity relationship diagram">
+erDiagram
+    AspNetUsers ||--o{ AspNetUserRoles : "has"
+    AspNetRoles ||--o{ AspNetUserRoles : "grants"
+    Categories ||--o{ Courses : "groups"
+    Courses ||--o{ LearningResources : "contains"
+    Courses ||--o{ Quizzes : "assessed by"
+    Courses ||--o{ Enrollments : "has"
+    AspNetUsers ||--o{ Enrollments : "makes"
+    AspNetUsers ||--o{ ResourceCompletions : "records"
+    LearningResources ||--o{ ResourceCompletions : "completed as"
+    Quizzes ||--o{ Questions : "contains"
+    Questions ||--o{ AnswerOptions : "offers"
+    Quizzes ||--o{ QuizAttempts : "attempted as"
+    AspNetUsers ||--o{ QuizAttempts : "submits"
+    QuizAttempts ||--o{ QuizAnswers : "contains"
+    Questions ||--o{ QuizAnswers : "answered in"
+    AnswerOptions |o--o{ QuizAnswers : "selected in"
+
+    AspNetRoles {
+        string Id PK
+        string Name UK "Admin or Student"
+    }
+    AspNetUserRoles {
+        string UserId PK, FK
+        string RoleId PK, FK
+    }
+    AspNetUsers {
+        string Id PK
+        string Email UK
+        string FullName
+        string Bio "nullable"
+        datetime CreatedAt
+    }
+    Categories {
+        int Id PK
+        string Name UK
+        string IconName
+        datetime UpdatedAt
+    }
+    Courses {
+        int Id PK
+        int CategoryId FK
+        string Title
+        string Difficulty
+        int DurationMinutes "check > 0"
+        bool IsPublished
+    }
+    LearningResources {
+        int Id PK
+        int CourseId FK
+        string Type
+        int SortOrder "check >= 0"
+        bool IsPreview
+    }
+    Enrollments {
+        int Id PK
+        string UserId FK "unique with CourseId"
+        int CourseId FK
+        datetime EnrolledAt
+    }
+    ResourceCompletions {
+        int Id PK
+        string UserId FK "unique with LearningResourceId"
+        int LearningResourceId FK
+        datetime CompletedAt
+    }
+    Quizzes {
+        int Id PK
+        int CourseId FK
+        int PassMarkPercent "0 to 100"
+        bool IsPublished
+    }
+    Questions {
+        int Id PK
+        int QuizId FK
+        string Text
+        int SortOrder
+    }
+    AnswerOptions {
+        int Id PK
+        int QuestionId FK
+        string Text
+        bool IsCorrect
+    }
+    QuizAttempts {
+        int Id PK
+        int QuizId FK
+        string UserId FK
+        int ScorePercent "0 to 100"
+        bool Passed
+    }
+    QuizAnswers {
+        int Id PK
+        int QuizAttemptId FK "unique with QuestionId"
+        int QuestionId FK
+        int SelectedOptionId FK "nullable"
+        bool IsCorrect
+    }
+                </pre>
+            </div>
+            <p class="diagram-note">Shortened for this page. The full diagram with every column, index and delete rule is in <a href="https://github.com/JahongirmirzoDv/LearnHub/blob/main/docs/ERD.md">docs/ERD.md</a>.</p>
+        </div>
+    </section>
+
+    <section class="section" id="quality" aria-labelledby="quality-title">
+        <div class="wrap">
+            <div class="section-head">
+                <h2 id="quality-title">Checked on every push</h2>
+                <p>GitHub Actions builds the solution and runs the full test suite before anything is deployed.</p>
+            </div>
+
+            <dl class="quality-grid">
+                <div>
+                    <dt>211 automated tests</dt>
+                    <dd>Unit, service, data-model and integration tests drive the real application in memory, including a crawler that follows every link as a guest, a student and an administrator.</dd>
+                </div>
+                <div>
+                    <dt>42 browser checks</dt>
+                    <dd>Playwright walks the guest, student and administrator journeys on desktop, tablet and phone sizes, failing on console errors, broken images or sideways scrolling, and axe-core finds no WCAG 2.2 A or AA violations.</dd>
+                </div>
+                <div>
+                    <dt>Every CRUD path covered</dt>
+                    <dd>Courses, categories, resources, quizzes, questions, answers, enrolments and users are created, read, updated and deleted through the same code the interface calls.</dd>
+                </div>
+                <div>
+                    <dt>Security by default</dt>
+                    <dd>Role checks on every protected action, ownership checks against direct object references, antiforgery tokens, encoded output, signature-checked uploads and no secrets in the repository.</dd>
+                </div>
+            </dl>
+        </div>
+    </section>
+
+    <section class="section section-paper" id="deploy" aria-labelledby="deploy-title">
+        <div class="wrap">
+            <div class="section-head">
+                <h2 id="deploy-title">Deployment</h2>
+                <p>The brief rules out Azure, so the project runs on Railway with Firebase Hosting for this presentation page.</p>
+            </div>
+
+            <dl class="stack-list">
+                <div><dt>Railway</dt><dd>Builds the <code>Dockerfile</code> and runs the ASP.NET Core MVC application, listening on the port Railway supplies in <code>PORT</code>.</dd></div>
+                <div><dt>Railway volume</dt><dd>Mounted at <code>/data</code> and holds the SQLite database, the Data Protection key ring and administrator uploads, so a redeploy keeps its data.</dd></div>
+                <div><dt>Firebase Hosting</dt><dd>Serves this static presentation page from the <code>FirebaseLanding/</code> folder. Firebase cannot execute an ASP.NET Core application, so it links to Railway instead.</dd></div>
+                <div><dt>GitHub</dt><dd>Source control and the CI workflow that builds the solution and runs the tests on every push.</dd></div>
+            </dl>
+        </div>
+    </section>
+
+    <section class="section" id="team" aria-labelledby="team-title">
+        <div class="wrap">
+            <div class="section-head">
+                <h2 id="team-title">Project team</h2>
+                <p>Replace the placeholders with each member's name and student ID.</p>
+            </div>
+
+            <ul class="team-grid">
+                <li class="line-red">
+                    <h3>Member 1 <span>Student ID</span></h3>
+                    <p>Project lead: architecture, authentication, security review and deployment.</p>
+                </li>
+                <li class="line-teal">
+                    <h3>Member 2 <span>Student ID</span></h3>
+                    <p>Course catalogue, search, enrolment and the student dashboard.</p>
+                </li>
+                <li class="line-purple">
+                    <h3>Member 3 <span>Student ID</span></h3>
+                    <p>Learning resources, uploads, quizzes, grading and progress tracking.</p>
+                </li>
+                <li class="line-blue">
+                    <h3>Member 4 <span>Student ID</span></h3>
+                    <p>Administration area, testing, documentation and the presentation site.</p>
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="section" aria-labelledby="assignment-title">
+        <div class="wrap assignment">
+            <div>
+                <h2 id="assignment-title">About the assignment</h2>
+                <p>
+                    LearnHub was built for the group assignment of CT050-3-2-WAPP Web Applications at Asia Pacific University
+                    of Technology &amp; Innovation. The brief asks for a database-driven web application with public and
+                    member areas, an administration area, validation, security and a written report.
+                </p>
+            </div>
+            <div class="button-row">
+                <a class="button button-signal" href="https://learnhub-production.up.railway.app">Open Learning System</a>
+                <a class="button" href="https://github.com/JahongirmirzoDv/LearnHub/blob/main/docs/REPORT_NOTES.md">Report content</a>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="wrap footer-row">
+        <p>LearnHub, a CT050-3-2-WAPP group project.</p>
+        <p><a href="https://github.com/JahongirmirzoDv/LearnHub">View Source on GitHub</a></p>
+    </div>
+</footer>
+
+<script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.esm.min.mjs";
+
+    mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: "strict",
+        theme: "base",
+        fontFamily: "Overpass, system-ui, sans-serif",
+        themeVariables: {
+            primaryColor: "#ffffff",
+            primaryBorderColor: "#1b2438",
+            primaryTextColor: "#1b2438",
+            lineColor: "#566076",
+            fontSize: "15px"
+        }
+    });
+</script>
+</body>
+</html>
