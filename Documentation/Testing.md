@@ -33,13 +33,13 @@ dotnet test --solution LearnHub.sln
 
 ## 3. Latest results
 
-Evidence: GitHub Actions run [34799666194](https://github.com/JahongirmirzoDv/LearnHub/actions/runs/34799666194) for
-commit `5de245b` on 14 September 2026. Test result files (TRX), Playwright reports, screenshots and application logs
+Evidence: GitHub Actions run [34800787823](https://github.com/JahongirmirzoDv/LearnHub/actions/runs/34800787823) for
+commit `273ccc6` on 14 September 2026. Test result files (TRX), Playwright reports, screenshots and application logs
 are attached to each run as artifacts.
 
 | Job | Result |
 |-----|--------|
-| Build and test (SQLite) | 182 of 182 tests passed; build succeeded |
+| Build and test (SQLite) | Release build with warnings treated as errors: 0 warnings, 0 errors; 182 of 182 tests passed |
 | SQL Server migrations, tests and smoke test | All migrations applied to an empty SQL Server 2022 database; idempotent script generated; 182 of 182 tests passed; smoke test of the published app in Production mode passed; no errors in the application log |
 | Browser tests (mobile, tablet, desktop) | 42 of 42 passed (14 scenarios in 3 viewports), including 9 accessibility scans with no WCAG A or AA violations; no errors in the application log |
 
@@ -128,16 +128,17 @@ cookies, CSP and error pages behave as in production.
 | 12 | Screenshot review | Home map invisible when animations are disabled | The resting style was hidden and only the animation fill showed it | Keyframes now animate from hidden to a visible resting style | `ab9ad5d` |
 | 13 | Accessibility scan | Code blocks and the About table could not be scrolled with the keyboard | Scrollable regions without focusable content | Focusable regions with labels | `5de245b` |
 | 14 | Accessibility scan | Two admin top bar links had no name on phones | Their text is hidden below the breakpoint | `aria-label` on both links | `5de245b` |
+| 15 | Build log review | 91 build warnings (xUnit1051) in test code | Async calls did not pass the test cancellation token | Token passed everywhere; CI now treats warnings as errors | `273ccc6` |
 
 ## 7. Manual testing checklist
 
-Recorded on 14 September 2026 against the CI build of commit `5de245b`, using the Playwright screenshots of every scenario
+Recorded on 14 September 2026 against the CI build of commit `273ccc6`, using the Playwright screenshots of every scenario
 on desktop, tablet and phone plus the automated reports. Items that need a person with the live site are marked
 **To do**; the team completes them after deployment.
 
 | Area | Check | Result | Evidence or note |
 |------|-------|--------|------------------|
-| Build | Solution builds in Release with no errors | Pass | CI build step |
+| Build | Solution builds in Release with no errors and no warnings | Pass | CI build step with `-p:TreatWarningsAsErrors=true` |
 | Pages | Every public, student and admin page loads without server errors | Pass | Link crawl tests as all three roles |
 | Roles | Guest, student and admin see only their own navigation and pages | Pass | Authorisation tests; screenshots of each role |
 | CRUD | Create, read, update and delete work for courses, categories, resources, quizzes, questions, enrolments, users and messages | Pass | Admin management integration tests; admin browser test |

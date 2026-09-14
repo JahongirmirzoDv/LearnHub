@@ -479,7 +479,7 @@ submissions, deletions and rejected uploads. A `/health` endpoint checks the dat
 
 LearnHub combines several test levels, all run by GitHub Actions on every push:
 
-| Level | Scope | Result on 14 September 2026 (commit `5de245b`) |
+| Level | Scope | Result on 14 September 2026 (commit `273ccc6`) |
 |-------|-------|------------------------------------------------|
 | Unit, service and integration (xUnit v3, `WebApplicationFactory`) | Grading, validation, content safety, uploads, catalogue and quiz services, public site, authentication, authorisation, student journey, admin CRUD, link crawl | 182 of 182 passed on SQLite |
 | Same suite on SQL Server 2022 | Production database engine, after applying all migrations to an empty database | 182 of 182 passed |
@@ -504,9 +504,9 @@ Representative test cases:
 | Delete a course with quiz attempts | Everything removed in order on both databases | Pass |
 | Crawl every page as guest, student and admin | No broken links or server errors | Pass |
 
-Testing found and fixed fourteen defects, including a query that SQLite could not translate, a relationship error when
+Testing found and fixed fifteen defects, including a query that SQLite could not translate, a relationship error when
 deleting courses, form pages that failed behind a TLS proxy, pages that scrolled sideways on phones and tablets, an
-invisible admin sidebar, overlapping map labels, and two accessibility problems. The strategy, full inventory, defect
+invisible admin sidebar, overlapping map labels, two accessibility problems and 91 build warnings in the test code. The strategy, full inventory, defect
 log and manual checklist are in [Testing.md](Testing.md).
 
 ## 6. Deployment
@@ -714,8 +714,8 @@ and status in [Requirements-Audit.md](Requirements-Audit.md).
 
 ### Appendix B – Test run evidence
 
-GitHub Actions run [34799666194](https://github.com/JahongirmirzoDv/LearnHub/actions/runs/34799666194) shows the three CI
-jobs for commit `5de245b`: build and test on SQLite (182 passed), SQL Server migrations, tests (182 passed) and smoke
+GitHub Actions run [34800787823](https://github.com/JahongirmirzoDv/LearnHub/actions/runs/34800787823) shows the three CI
+jobs for commit `273ccc6`: build with zero warnings and tests on SQLite (182 passed), SQL Server migrations, tests (182 passed) and smoke
 test, and browser tests (42 passed). Each run stores TRX result files, the idempotent migration script, Playwright
 reports, screenshots and application logs as artifacts.
 
