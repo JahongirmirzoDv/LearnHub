@@ -1,7 +1,8 @@
 name: EF Core migration (cloud)
 
-# Generates a new EF Core migration for BOTH database providers in the cloud and commits it to the
-# selected branch. Useful for team members without the .NET SDK installed locally.
+# Generates a new EF Core migration in the cloud and commits it to the selected branch. Useful for team members
+# who do not have the .NET SDK installed locally. The project uses a single provider (SQLite), so one migration
+# per name is produced, in the same folder the application loads migrations from at start-up.
 on:
   workflow_dispatch:
     inputs:
@@ -48,23 +49,13 @@ jobs:
           dotnet tool restore
           dotnet restore LearnHub.sln
 
-      - name: Add SQLite migration
+      - name: Add migration
         env:
           MIGRATION_NAME: ${{ inputs.name }}
         run: >
           dotnet ef migrations add "$MIGRATION_NAME"
           --project src/LearnHub
-          --context SqliteDbContext
-          --output-dir Data/Migrations/Sqlite
-
-      - name: Add SQL Server migration
-        env:
-          MIGRATION_NAME: ${{ inputs.name }}
-        run: >
-          dotnet ef migrations add "$MIGRATION_NAME"
-          --project src/LearnHub
-          --context SqlServerDbContext
-          --output-dir Data/Migrations/SqlServer
+          --output-dir Data/Migrations
 
       - name: Verify the solution still builds
         run: dotnet build LearnHub.sln --configuration Release
@@ -80,5 +71,5 @@ jobs:
             echo "No migration changes to commit."
             exit 0
           fi
-          git commit -m "chore(db): add $MIGRATION_NAME migration (SQLite + SQL Server)"
+          git commit -m "chore(db): add $MIGRATION_NAME migration"
           git push

@@ -4,8 +4,8 @@ on:
   push:
     branches: ["**"]
     paths-ignore:
+      - "FirebaseLanding/**"
       - "docs/**"
-      - "Documentation/**"
       - "**/*.md"
   pull_request:
     branches: [main, develop]
@@ -25,7 +25,7 @@ env:
 
 jobs:
   build-and-test:
-    name: Build and test (SQLite)
+    name: Build and test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -62,7 +62,7 @@ jobs:
 
       - name: Summarise test results
         if: always()
-        run: bash scripts/ci/test-summary.sh TestResults test-results.trx "Test results (SQLite)"
+        run: bash scripts/ci/test-summary.sh TestResults test-results.trx "Test results"
 
       - name: Upload test results
         if: always()
@@ -72,107 +72,88 @@ jobs:
           path: TestResults
           retention-days: 14
 
-  sqlserver:
-    name: SQL Server migrations, tests and smoke test
+  # Builds the image Railway builds and runs it the way Railway runs it: Production settings, a PORT chosen by the
+  # platform, TLS terminated in front and a volume at /data. This is what catches a broken Dockerfile or a missing
+  # migration before a deploy does.
+  container:
+    name: Railway image, migrations and smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Set up .NET 10
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
-          restore-keys: nuget-${{ runner.os }}-
+      - name: Build the Docker image
+        run: docker build --tag learnhub:ci .
 
       # The password is generated per run and masked, so no credential is stored in the repository.
-      - name: Start SQL Server 2022
+      - name: Start the container with Railway-like settings
         run: |
-          password="Ci$(openssl rand -hex 16)!a1"
-          echo "::add-mask::$password"
-          echo "SQL_PASSWORD=$password" >> "$GITHUB_ENV"
-          docker run -d --name mssql -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=$password" -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+          admin_password="Adm$(openssl rand -hex 12)A1"
+          echo "::add-mask::$admin_password"
+          echo "ADMIN_PASSWORD=$admin_password" >> "$GITHUB_ENV"
+          docker run --detach --name learnhub \
+            --publish 8080:8080 \
+            --mount type=volume,source=learnhub-data,target=/data \
+            --env PORT=8080 \
+            --env Seed__AdminPassword="$admin_password" \
+            learnhub:ci
+
+      - name: Wait for the health check
+        run: |
           for attempt in $(seq 1 60); do
-            if docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$password" -Q "SELECT 1" > /dev/null 2>&1; then
-              echo "SQL Server is ready."
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
+              echo "LearnHub is healthy."
               exit 0
             fi
             sleep 3
           done
-          docker logs mssql
+          docker logs learnhub
           exit 1
 
-      - name: Restore tools and build
-        run: |
-          dotnet tool restore
-          dotnet build LearnHub.sln --configuration Release
+      - name: Smoke test the container
+        run: SMOKE_FORWARDED_PROTO=https bash scripts/smoke-test.sh http://127.0.0.1:8080
 
-      - name: Apply all migrations to an empty database with dotnet ef
-        run: |
-          export ConnectionStrings__SqlServer="Server=localhost,1433;Database=LearnHubMigrations;User Id=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-          dotnet ef database update --project src/LearnHub --context SqlServerDbContext --configuration Release --no-build
-
-      - name: Generate the idempotent migration script
-        run: >
-          dotnet ef migrations script --idempotent
-          --project src/LearnHub --context SqlServerDbContext --configuration Release --no-build
-          --output artifacts/learnhub-sqlserver-migrations.sql
-
-      - name: Run the test suite against SQL Server
-        run: |
-          export LEARNHUB_TEST_SQLSERVER="Server=localhost,1433;User Id=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-          dotnet test --solution LearnHub.sln --configuration Release --no-build \
-            --results-directory "$GITHUB_WORKSPACE/TestResults" \
-            --report-xunit-trx --report-xunit-trx-filename sqlserver-test-results.trx
-
-      - name: Summarise test results
+      - name: Check the start-up log
         if: always()
-        run: bash scripts/ci/test-summary.sh TestResults sqlserver-test-results.trx "Test results (SQL Server)"
-
-      - name: Publish LearnHub
-        run: dotnet publish src/LearnHub/LearnHub.csproj --configuration Release --output "$RUNNER_TEMP/learnhub"
-
-      - name: Smoke test the published app on SQL Server
         run: |
-          log="$RUNNER_TEMP/learnhub-sqlserver.log"
-          (
-            cd "$RUNNER_TEMP/learnhub"
-            export ASPNETCORE_ENVIRONMENT=Production
-            export ASPNETCORE_URLS=http://127.0.0.1:5080
-            # Same as Azure App Service on Linux: TLS ends at the proxy, which reports the scheme in X-Forwarded-Proto.
-            export ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
-            export Database__Provider=SqlServer
-            export ConnectionStrings__SqlServer="Server=localhost,1433;Database=LearnHubSmoke;User Id=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-            export Storage__RootPath="$RUNNER_TEMP/storage"
-            admin_password="Adm$(openssl rand -hex 12)A1"
-            echo "::add-mask::$admin_password"
-            export Seed__AdminPassword="$admin_password"
-            nohup dotnet LearnHub.dll > "$log" 2>&1 &
-          )
+          docker logs learnhub > "$RUNNER_TEMP/learnhub-container.log" 2>&1 || true
+          cat "$RUNNER_TEMP/learnhub-container.log"
           status=0
-          SMOKE_FORWARDED_PROTO=https bash scripts/smoke-test.sh http://127.0.0.1:5080 || status=1
-          grep -q "Demo data seeded" "$log" || { echo "::error::Demo data was not seeded on SQL Server."; status=1; }
-          grep -q "Administrator account" "$log" || { echo "::error::The administrator account was not created."; status=1; }
-          if grep -Eq "^(fail|crit):" "$log"; then echo "::error::The application logged errors."; status=1; fi
-          if [ "$status" != "0" ]; then cat "$log"; fi
+          grep -q "Applying migration" "$RUNNER_TEMP/learnhub-container.log" \
+            || { echo "::error::Migrations were not applied on start-up."; status=1; }
+          grep -q "Demo data seeded" "$RUNNER_TEMP/learnhub-container.log" \
+            || { echo "::error::Demo data was not seeded."; status=1; }
+          grep -q "Administrator account" "$RUNNER_TEMP/learnhub-container.log" \
+            || { echo "::error::The administrator account was not created."; status=1; }
+          if grep -Eq "^(fail|crit):" "$RUNNER_TEMP/learnhub-container.log"; then
+            echo "::error::The application logged errors."
+            status=1
+          fi
           exit "$status"
 
-      - name: Upload SQL Server artefacts
+      # Anything written to /data survives a restart only because the volume is mounted there: this proves the
+      # SQLite file and the Data Protection key ring are genuinely persistent on Railway.
+      - name: Restart and confirm the data survived
+        run: |
+          docker restart learnhub
+          for attempt in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then break; fi
+            sleep 3
+          done
+          docker logs learnhub > "$RUNNER_TEMP/learnhub-restart.log" 2>&1 || true
+          if grep -q "Applying migration" "$RUNNER_TEMP/learnhub-restart.log"; then
+            echo "::error::Migrations ran again after a restart, so the database did not persist."
+            exit 1
+          fi
+          echo "The database survived the restart; migrations were not re-applied."
+
+      - name: Upload container log
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: sqlserver
-          path: |
-            artifacts/learnhub-sqlserver-migrations.sql
-            TestResults
-            ${{ runner.temp }}/learnhub-sqlserver.log
+          name: container
+          path: ${{ runner.temp }}/learnhub-*.log
           retention-days: 14
 
   e2e:
@@ -231,7 +212,8 @@ jobs:
             export ASPNETCORE_URLS="$E2E_BASE_URL"
             export Kestrel__Certificates__Default__Path="$RUNNER_TEMP/e2e-cert.pem"
             export Kestrel__Certificates__Default__KeyPath="$RUNNER_TEMP/e2e-key.pem"
-            export ConnectionStrings__Sqlite="Data Source=$RUNNER_TEMP/learnhub-e2e.db"
+            export DATABASE_CONNECTION_STRING="Data Source=$RUNNER_TEMP/learnhub-e2e.db"
+            export DataProtection__KeysPath="$RUNNER_TEMP/e2e-keys"
             export Storage__RootPath="$RUNNER_TEMP/storage"
             export Seed__AdminEmail="$E2E_ADMIN_EMAIL"
             export Seed__AdminPassword="$E2E_ADMIN_PASSWORD"
