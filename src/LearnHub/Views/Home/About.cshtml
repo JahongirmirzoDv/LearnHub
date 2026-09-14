@@ -26,7 +26,8 @@
 
                 <section class="mb-5" aria-labelledby="audience-title">
                     <h2 id="audience-title" class="h3 mb-3">Who LearnHub is for</h2>
-                    <div class="table-wrap">
+                    @* The table can scroll sideways on phones and contains no links, so the region itself is focusable. *@
+                    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="audience-title">
                         <table class="table table-lh role-table">
                             <caption class="visually-hidden">What each type of user can do</caption>
                             <thead>

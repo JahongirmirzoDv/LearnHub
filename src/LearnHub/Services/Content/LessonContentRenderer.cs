@@ -53,7 +53,8 @@ public static partial class LessonContentRenderer
                 else
                 {
                     CloseBlock(html, ref block);
-                    html.Append("<pre class=\"lesson-code\"><code>");
+                    // Focusable, so keyboard users can scroll code lines that are wider than the screen.
+                    html.Append("<pre class=\"lesson-code\" tabindex=\"0\"><code>");
                     inCode = true;
                 }
 

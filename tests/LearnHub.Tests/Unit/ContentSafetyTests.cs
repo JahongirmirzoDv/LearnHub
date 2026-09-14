@@ -76,7 +76,7 @@ public sealed class LessonContentRendererTests
     {
         var html = Render("```\nif (a < b && **c**) { }\n```");
 
-        Assert.Contains("<pre class=\"lesson-code\"><code>", html);
+        Assert.Contains("<pre class=\"lesson-code\" tabindex=\"0\"><code>", html);
         Assert.Contains("if (a &lt; b &amp;&amp; **c**) { }", html);
         Assert.DoesNotContain("<strong>", html);
     }

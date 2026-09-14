@@ -70,10 +70,11 @@
                 </button>
                 <span class="fw-bold text-truncate">@ViewData["Title"]</span>
                 <div class="ms-auto d-flex align-items-center gap-2">
-                    <a class="btn btn-outline-secondary btn-sm" asp-area="" asp-controller="Home" asp-action="Index">
+                    @* The visible text is hidden on small screens, so the links carry their names in aria-label. *@
+                    <a class="btn btn-outline-secondary btn-sm" asp-area="" asp-controller="Home" asp-action="Index" aria-label="View site">
                         <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span class="d-none d-sm-inline">View site</span>
                     </a>
-                    <a class="user-chip text-decoration-none text-reset" asp-area="" asp-controller="Profile" asp-action="Index">
+                    <a class="user-chip text-decoration-none text-reset" asp-area="" asp-controller="Profile" asp-action="Index" aria-label="@($"Profile of {User.GetDisplayName()}")">
                         <span class="avatar" aria-hidden="true">@DisplayFormat.Initials(User.GetDisplayName())</span>
                         <span class="d-none d-md-inline">@User.GetDisplayName()</span>
                     </a>
