@@ -11,9 +11,9 @@ whole platform from a protected admin area.
 
 | | |
 |---|---|
-| Presentation site (GitHub Pages) | https://jahongirmirzodv.github.io/LearnHub/ |
+| Presentation site (GitHub Pages) | https://KhayitOff.github.io/LearnHub/ |
 | Live application (Azure App Service) | Added after provisioning – see [Deployment](Documentation/Deployment.md) |
-| Repository | https://github.com/JahongirmirzoDv/LearnHub |
+| Repository | https://github.com/KhayitOff/LearnHub |
 
 ![LearnHub home page](docs/assets/screens/home-desktop.png)
 
