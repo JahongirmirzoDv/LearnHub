@@ -24,6 +24,8 @@ internal sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
 {
     public void Configure(EntityTypeBuilder<Question> builder)
     {
+        builder.ToTable(t => t.HasCheckConstraint("CK_Questions_Points", "Points BETWEEN 1 AND 100"));
+
         builder.Property(q => q.Text).IsRequired().HasMaxLength(FieldLengths.QuestionText);
         builder.Property(q => q.Explanation).HasMaxLength(FieldLengths.QuestionExplanation);
 
@@ -59,10 +61,11 @@ internal sealed class QuizAttemptConfiguration : IEntityTypeConfiguration<QuizAt
         {
             t.HasCheckConstraint("CK_QuizAttempts_ScorePercent", "ScorePercent BETWEEN 0 AND 100");
             t.HasCheckConstraint("CK_QuizAttempts_CorrectCount", "CorrectCount >= 0 AND CorrectCount <= QuestionCount");
+            t.HasCheckConstraint("CK_QuizAttempts_Score", "Score >= 0 AND Score <= MaxScore");
         });
 
         builder.HasIndex(a => new { a.UserId, a.QuizId });
-        builder.HasIndex(a => a.SubmittedAt);
+        builder.HasIndex(a => a.CompletedAt);
 
         builder.HasOne(a => a.Quiz)
             .WithMany(q => q.Attempts)
@@ -87,8 +90,8 @@ internal sealed class QuizAnswerConfiguration : IEntityTypeConfiguration<QuizAns
             .HasForeignKey(a => a.QuizAttemptId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Restrict (NO ACTION) on both links: SQL Server rejects a second cascade path from Quizzes
-        // to QuizAnswers. Services delete dependent answers explicitly before removing questions/options.
+        // Restrict on both links, so editing a quiz can never silently delete a student's answer history.
+        // Services clear or delete dependent answers explicitly before removing questions or options.
         builder.HasOne(a => a.Question)
             .WithMany()
             .HasForeignKey(a => a.QuestionId)

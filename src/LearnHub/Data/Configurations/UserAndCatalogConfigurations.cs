@@ -63,12 +63,14 @@ internal sealed class LearningResourceConfiguration : IEntityTypeConfiguration<L
         builder.Property(r => r.Summary).HasMaxLength(FieldLengths.ResourceSummary);
         builder.Property(r => r.Type).HasConversion<string>().HasMaxLength(FieldLengths.EnumName);
         builder.Property(r => r.Body).HasMaxLength(FieldLengths.ResourceBody);
+        builder.Property(r => r.Solution).HasMaxLength(FieldLengths.ResourceBody);
         builder.Property(r => r.ExternalUrl).HasMaxLength(FieldLengths.Url);
         builder.Property(r => r.FilePath).HasMaxLength(FieldLengths.WebPath);
         builder.Property(r => r.FileName).HasMaxLength(FieldLengths.FileName);
         builder.Property(r => r.FileContentType).HasMaxLength(FieldLengths.ContentType);
 
         builder.HasIndex(r => new { r.CourseId, r.SortOrder });
+        builder.HasIndex(r => new { r.CourseId, r.IsPublished });
 
         builder.HasOne(r => r.Course)
             .WithMany(c => c.Resources)
@@ -81,8 +83,11 @@ internal sealed class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollm
 {
     public void Configure(EntityTypeBuilder<Enrollment> builder)
     {
+        builder.ToTable(t => t.HasCheckConstraint("CK_Enrollments_CompletionPercentage", "CompletionPercentage BETWEEN 0 AND 100"));
+
         // A student can enrol in a course only once.
         builder.HasIndex(e => new { e.UserId, e.CourseId }).IsUnique();
+        builder.HasIndex(e => new { e.CourseId, e.CompletionPercentage });
 
         builder.HasOne(e => e.User)
             .WithMany(u => u.Enrollments)

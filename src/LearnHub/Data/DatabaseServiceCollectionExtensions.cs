@@ -5,37 +5,15 @@ namespace LearnHub.Data;
 
 public static class DatabaseServiceCollectionExtensions
 {
-    /// <summary>
-    /// Registers <see cref="ApplicationDbContext"/> backed by the provider selected in
-    /// <c>Database:Provider</c>. Controllers and services depend on the abstract context only.
-    /// </summary>
+    /// <summary>Registers <see cref="ApplicationDbContext"/> on the SQLite database named by the configuration.</summary>
     public static IServiceCollection AddLearnHubDatabase(
         this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        var section = configuration.GetSection(DatabaseOptions.SectionName);
-        services.Configure<DatabaseOptions>(section);
-        var options = section.Get<DatabaseOptions>() ?? new DatabaseOptions();
+        services.Configure<DatabaseOptions>(configuration.GetSection(DatabaseOptions.SectionName));
 
-        if (options.Provider == DatabaseProvider.SqlServer)
-        {
-            var connectionString = configuration.GetConnectionString("SqlServer");
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                throw new InvalidOperationException(
-                    "ConnectionStrings:SqlServer must be configured when Database:Provider is SqlServer.");
-            }
-
-            // Azure SQL can briefly refuse connections (e.g. while resuming from auto-pause),
-            // so transient failures are retried.
-            services.AddDbContext<ApplicationDbContext, SqlServerDbContext>(db =>
-                db.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
-        }
-        else
-        {
-            var connectionString = SqliteConnectionStrings.Resolve(
-                configuration.GetConnectionString("Sqlite"), environment.ContentRootPath);
-            services.AddDbContext<ApplicationDbContext, SqliteDbContext>(db => db.UseSqlite(connectionString));
-        }
+        var connectionString = SqliteConnectionStrings.Resolve(
+            SqliteConnectionStrings.FromConfiguration(configuration), environment.ContentRootPath);
+        services.AddDbContext<ApplicationDbContext>(db => db.UseSqlite(connectionString));
 
         return services;
     }
@@ -44,6 +22,18 @@ public static class DatabaseServiceCollectionExtensions
 internal static class SqliteConnectionStrings
 {
     private const string DefaultConnectionString = "Data Source=App_Data/learnhub.db";
+
+    /// <summary>
+    /// <see cref="DatabaseOptions.ConnectionStringVariable"/> wins over <c>ConnectionStrings:DefaultConnection</c>, so a
+    /// hosting platform can point the app at its persistent volume without editing appsettings.json.
+    /// </summary>
+    public static string? FromConfiguration(IConfiguration configuration)
+    {
+        var fromPlatform = configuration[DatabaseOptions.ConnectionStringVariable];
+        return string.IsNullOrWhiteSpace(fromPlatform)
+            ? configuration.GetConnectionString(DatabaseOptions.ConnectionStringName)
+            : fromPlatform;
+    }
 
     /// <summary>
     /// Makes a relative SQLite file path absolute (relative to the content root) and creates its

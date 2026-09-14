@@ -17,6 +17,7 @@ public sealed class DemoDataSeeder(
     ApplicationDbContext db,
     UserManager<ApplicationUser> userManager,
     IFileStorageService storage,
+    IProgressService progress,
     IHostEnvironment environment,
     IOptions<SeedOptions> seedOptions,
     TimeProvider clock,
@@ -46,6 +47,7 @@ public sealed class DemoDataSeeder(
             var courses = await SeedCatalogueAsync(now, cancellationToken);
             var learners = await SeedLearnersAsync(now);
             await SeedActivityAsync(courses, learners, now, cancellationToken);
+            await SyncEnrollmentProgressAsync(courses, cancellationToken);
             SeedContactMessages(now);
             await db.SaveChangesAsync(cancellationToken);
             seeded = (courses.Count, learners.Count);
@@ -94,6 +96,7 @@ public sealed class DemoDataSeeder(
                     Summary = item.Summary,
                     Type = item.Type,
                     Body = item.Body,
+                    Solution = item.Solution,
                     ExternalUrl = item.Url,
                     EstimatedMinutes = item.Minutes,
                     IsPreview = item.IsPreview,
@@ -125,7 +128,13 @@ public sealed class DemoDataSeeder(
                 var questionOrder = 1;
                 foreach (var questionDefinition in quizDefinition.Questions)
                 {
-                    var question = new Question { Text = questionDefinition.Text, Explanation = questionDefinition.Explanation, SortOrder = questionOrder++ };
+                    var question = new Question
+                    {
+                        Text = questionDefinition.Text,
+                        Explanation = questionDefinition.Explanation,
+                        Points = questionDefinition.Points,
+                        SortOrder = questionOrder++
+                    };
                     for (var optionIndex = 0; optionIndex < questionDefinition.Options.Length; optionIndex++)
                     {
                         question.Options.Add(new AnswerOption
@@ -267,10 +276,27 @@ public sealed class DemoDataSeeder(
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>Stores each seeded enrolment's progress, dated when the learner last worked on the course.</summary>
+    private async Task SyncEnrollmentProgressAsync(List<Course> courses, CancellationToken cancellationToken)
+    {
+        foreach (var course in courses)
+        {
+            await progress.SyncAsync(course.Id, cancellationToken: cancellationToken);
+        }
+
+        // SyncAsync stamps completion with the current time; historical demo data finished at its last activity.
+        foreach (var enrollment in db.Enrollments.Local.Where(e => e.CompletedAt is not null))
+        {
+            enrollment.CompletedAt = enrollment.LastAccessedAt ?? enrollment.EnrolledAt;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     private static QuizAttempt CreateAttempt(Quiz quiz, string userId, double skill, DateTime submittedAt, Random random)
     {
         var questions = quiz.Questions
-            .Select(q => new GradingQuestion(q.Id, q.Options.Select(o => new GradingOption(o.Id, o.IsCorrect)).ToList()))
+            .Select(q => new GradingQuestion(q.Id, q.Points, q.Options.Select(o => new GradingOption(o.Id, o.IsCorrect)).ToList()))
             .ToList();
 
         var answers = new Dictionary<int, int>();
@@ -288,9 +314,12 @@ public sealed class DemoDataSeeder(
         {
             QuizId = quiz.Id,
             UserId = userId,
-            SubmittedAt = submittedAt,
+            StartedAt = submittedAt.AddMinutes(-random.Next(4, 16)),
+            CompletedAt = submittedAt,
             CorrectCount = graded.CorrectCount,
             QuestionCount = graded.QuestionCount,
+            Score = graded.Score,
+            MaxScore = graded.MaxScore,
             ScorePercent = graded.ScorePercent,
             Passed = graded.Passed,
             Answers = graded.Answers

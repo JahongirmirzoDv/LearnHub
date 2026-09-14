@@ -12,9 +12,13 @@ internal sealed record SeedResource(
     bool IsPreview = false,
     string? Body = null,
     string? Url = null,
-    string? File = null);
+    string? File = null,
+    string? Solution = null);
 
-internal sealed record SeedQuestion(string Text, string Explanation, int CorrectIndex, params string[] Options);
+internal sealed record SeedQuestion(string Text, string Explanation, int CorrectIndex, params string[] Options)
+{
+    public int Points { get; init; } = 1;
+}
 
 internal sealed record SeedQuiz(string Title, string Description, int PassMark, IReadOnlyList<SeedQuestion> Questions);
 
@@ -40,19 +44,24 @@ internal static partial class DemoCatalog
 {
     public const string Programming = "Programming";
     public const string WebDevelopment = "Web Development";
-    public const string Databases = "Databases";
+    public const string Database = "Database";
     public const string Cybersecurity = "Cybersecurity";
     public const string Networking = "Networking";
-    public const string CloudComputing = "Cloud Computing";
+    public const string SoftwareEngineering = "Software Engineering";
+    public const string Mathematics = "Mathematics";
+    public const string Other = "Other";
 
+    // Insertion order sets the category ids, and the id picks the category's line colour, which the course covers match.
     public static IReadOnlyList<SeedCategory> Categories { get; } =
     [
         new(Programming, "Problem solving and writing clear, testable code in modern languages.", "code-slash"),
         new(WebDevelopment, "Building accessible, secure and responsive websites and web applications.", "globe2"),
-        new(Databases, "Designing relational schemas and turning data into information with SQL.", "database"),
+        new(Database, "Designing relational schemas and turning data into information with SQL.", "database"),
         new(Cybersecurity, "Protecting applications, data and people from common attacks.", "shield-lock"),
         new(Networking, "How computers communicate, from cables and switches to internet protocols.", "diagram-3"),
-        new(CloudComputing, "Deploying, scaling and operating applications on cloud platforms.", "cloud")
+        new(SoftwareEngineering, "Working as a team: version control, testing, deployment and maintainable systems.", "journal-code"),
+        new(Mathematics, "The logic, number systems and discrete maths that computing is built on.", "graph-up"),
+        new(Other, "Study skills and topics that support learning in any subject.", "lightbulb")
     ];
 
     public static IReadOnlyList<SeedCourse> Courses { get; } =
@@ -65,8 +74,10 @@ internal static partial class DemoCatalog
         RelationalDatabaseDesign(),
         WebSecurityBasics(),
         NetworkingFundamentals(),
-        CloudFoundations(),
-        GitForTeams()
+        DeployingWebApplications(),
+        GitForTeams(),
+        DiscreteMathematics(),
+        StudySkills()
     ];
 
     public static IEnumerable<(string Name, string Email, int DaysAgo)> Learners(string demoStudentEmail) =>

@@ -6,7 +6,7 @@ internal static partial class DemoCatalog
 {
     private static SeedCourse RelationalDatabaseDesign() => new(
         Title: "Relational Database Design with SQL",
-        Category: Databases,
+        Category: Database,
         Difficulty: DifficultyLevel.Intermediate,
         DurationMinutes: 600,
         Instructor: "Prof. Mei Ling Tan",
@@ -100,6 +100,29 @@ internal static partial class DemoCatalog
 
                 `WHERE` filters rows **before** grouping; `HAVING` filters the groups **after** aggregation.
                 """),
+            new("Exercise: an enrolment report", ResourceType.Exercise, "Write a JOIN with GROUP BY for a real reporting question.", 15,
+                Body: """
+                    ## Your task
+
+                    A learning system has these tables:
+
+                    - `Courses(Id, Title)`
+                    - `Enrollments(Id, UserId, CourseId, EnrolledAt)`
+
+                    Write one query that lists **every** course title with the number of students enrolled in it, including courses nobody has joined yet (they should show 0). Sort the most popular course first.
+                    """,
+                Solution: """
+                    ```
+                    SELECT c.Title, COUNT(e.Id) AS StudentCount
+                    FROM Courses AS c
+                    LEFT JOIN Enrollments AS e ON e.CourseId = c.Id
+                    GROUP BY c.Id, c.Title
+                    ORDER BY StudentCount DESC, c.Title;
+                    ```
+
+                    - A `LEFT JOIN` keeps courses without enrolments; an `INNER JOIN` would drop them.
+                    - `COUNT(e.Id)` counts only matched rows, so unmatched courses get 0. `COUNT(*)` would wrongly count them as 1.
+                    """),
             new("SQL JOIN cheat sheet", ResourceType.Pdf,
                 "One page comparing INNER, LEFT, RIGHT and FULL joins with example queries.",
                 5, File: "sql-joins-cheat-sheet.pdf")
@@ -333,99 +356,154 @@ internal static partial class DemoCatalog
             ])
         ]);
 
-    private static SeedCourse CloudFoundations() => new(
-        Title: "Cloud Computing Foundations",
-        Category: CloudComputing,
-        Difficulty: DifficultyLevel.Beginner,
-        DurationMinutes: 360,
+    private static SeedCourse DeployingWebApplications() => new(
+        Title: "Deploying Web Applications",
+        Category: SoftwareEngineering,
+        Difficulty: DifficultyLevel.Intermediate,
+        DurationMinutes: 300,
         Instructor: "Mr. Lucas Bennett",
         Cover: "cloud-foundations",
-        ShortDescription: "Learn core cloud concepts and deploy a web application to Microsoft Azure step by step.",
+        ShortDescription: "Package an ASP.NET Core app in a container and run it on a cloud platform with persistent storage.",
         Description: """
-            Cloud platforms let teams run applications without buying and maintaining servers. This course explains the essential ideas behind cloud computing and applies them on Microsoft Azure.
+            A web application is only useful once people can reach it. This course follows the path LearnHub itself takes from a laptop to the internet.
 
-            You will compare IaaS, PaaS and SaaS, understand regions, scaling and the shared responsibility model, and consider costs. The practical lesson walks through deploying an ASP.NET Core application to Azure App Service with an Azure SQL database.
+            You will compare hosting models, package an application as a Docker image, configure it with environment variables instead of committed secrets, keep a SQLite database on a persistent volume, and publish a static landing page on a content delivery network.
             """,
         Outcomes: """
-            Explain IaaS, PaaS and SaaS with real examples
-            Describe regions, availability and elastic scaling
-            Apply the shared responsibility model to security decisions
-            Deploy an ASP.NET Core application to Azure App Service
-            Keep secrets out of source code with application settings
+            Explain IaaS, PaaS and static hosting with real examples
+            Describe what a container image contains and why it helps deployment
+            Configure an application through environment variables and keep secrets out of Git
+            Keep application data on a persistent volume that survives redeployments
+            Choose between a server-side host and a static host for each part of a system
             """,
         IsPublished: true,
         Resources:
         [
-            new("What the cloud actually is", ResourceType.Article, "Service models, regions and who is responsible for what.", 10, IsPreview: true, Body: """
-                ## Someone else's computers, as a service
+            new("Where web applications run", ResourceType.Article, "Hosting models, and why a server-side app and a static site need different hosts.", 10, IsPreview: true, Body: """
+                ## Renting computers as a service
 
-                Cloud computing means renting computing resources over the internet and paying for what you use, instead of buying hardware up front.
+                Cloud platforms let a team run software without buying servers. You pay for what you use and the provider looks after the hardware.
 
-                ## Service models
+                ## Hosting models
 
-                - **IaaS** (Infrastructure as a Service) – you rent virtual machines and manage the operating system. Example: Azure Virtual Machines.
-                - **PaaS** (Platform as a Service) – you deploy code and the provider runs the servers. Example: Azure App Service.
-                - **SaaS** (Software as a Service) – you use finished software. Example: Microsoft 365.
+                - **IaaS** (Infrastructure as a Service) – you rent virtual machines and manage the operating system yourself.
+                - **PaaS** (Platform as a Service) – you hand over code or a container image and the platform runs it, restarts it and gives it a web address. Railway, Render and Heroku are examples.
+                - **Static hosting** – files such as HTML, CSS and images are copied to a content delivery network (CDN) and served as they are. Firebase Hosting, Netlify and GitHub Pages are examples.
 
-                ## Regions and scaling
+                ## Why one system can use two hosts
 
-                A **region** is a set of datacentres in one geographic area, such as Southeast Asia. Choosing a region near your users reduces latency. **Elastic scaling** adds capacity when demand rises and removes it when demand falls.
+                An ASP.NET Core MVC application runs C# on the server for every request: it checks the login cookie, queries the database and renders Razor views. A static host cannot run that code, so it cannot host the application itself.
+
+                A static host is still ideal for a fast landing page that describes the project and links to the running application. LearnHub uses exactly this split: the MVC app runs on a PaaS, and its presentation site is a static page on a CDN.
 
                 ## Shared responsibility
 
-                The provider secures the physical datacentres and the platform. You remain responsible for your data, user accounts, configuration and application code.
+                The provider secures its datacentres and platform. You remain responsible for your code, your configuration, your users' data and who can access it.
                 """),
-            new("Azure Fundamentals (AZ-900) course", ResourceType.Video,
-                "freeCodeCamp's preparation course for the Azure Fundamentals certification. The first hour covers cloud concepts.",
-                60, Url: Watch("NKEFWyqJ5XA")),
-            new("Deploying a web app to Azure App Service", ResourceType.Article, "The steps used to put an ASP.NET Core application such as LearnHub online.", 15, Body: """
-                ## The architecture
+            new("Docker crash course", ResourceType.Video,
+                "TechWorld with Nana explains images, containers and Dockerfiles for complete beginners.",
+                60, Url: Watch("pg19Z8LL06w")),
+            new("From Dockerfile to a running container", ResourceType.Article, "How a multi-stage Dockerfile builds a small, secure image for ASP.NET Core.", 15, Body: """
+                ## Build once, run anywhere
 
-                - **Azure App Service** runs the ASP.NET Core application.
-                - **Azure SQL Database** stores the data.
-                - **GitHub Actions** builds, tests and deploys every change to the main branch.
+                A **container image** bundles the published application with the exact runtime it needs. The same image runs on a laptop, in CI and on the hosting platform, so "it works on my machine" problems disappear.
 
-                ## Step by step
-
-                1. Create a resource group, an App Service plan and a web app with the .NET 10 runtime.
-                2. Create an Azure SQL server and database, and allow access from Azure services.
-                3. In the web app's settings, add the connection string and set `ASPNETCORE_ENVIRONMENT` to `Production`.
-                4. Store the deployment credentials as GitHub repository secrets.
-                5. Push to `main`; the workflow publishes the app and runs a health check.
+                ## A multi-stage Dockerfile
 
                 ```
-                az webapp config appsettings set --name learnhub-app --resource-group learnhub-rg --settings Database__Provider=SqlServer
+                FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+                WORKDIR /src
+                COPY . .
+                RUN dotnet publish src/LearnHub/LearnHub.csproj -c Release -o /app
+
+                FROM mcr.microsoft.com/dotnet/aspnet:10.0
+                WORKDIR /app
+                COPY --from=build /app .
+                USER $APP_UID
+                ENTRYPOINT ["dotnet", "LearnHub.dll"]
                 ```
 
-                > Configuration keys use double underscores (`Database__Provider`) in environment variables to represent the nested `Database:Provider` setting.
+                1. The **build stage** uses the large SDK image to compile and publish the app.
+                2. The **final stage** starts from the much smaller runtime image and copies in only the published output.
+                3. `USER $APP_UID` runs the app as a normal user instead of root, which limits the damage if it is ever compromised.
 
-                ## Keep secrets out of Git
+                ## Listening on the right port
 
-                Passwords and connection strings belong in App Service settings or Azure Key Vault, never in `appsettings.json` or source code.
+                Platforms tell the container which port to use through a `PORT` environment variable. The application must listen on that port, on all network interfaces, or the platform's health check will never reach it.
                 """),
-            new("Azure App Service documentation", ResourceType.Link,
-                "Microsoft's overview of Azure App Service: features, pricing tiers and quickstarts.",
-                15, Url: "https://learn.microsoft.com/en-us/azure/app-service/overview")
+            new("Configuration, secrets and persistent data", ResourceType.Article, "Environment variables, volumes and a deployment checklist.", 12, Body: """
+                ## Configuration belongs to the environment
+
+                The same image must work in development, testing and production, so settings that change between environments come from **environment variables**, not from files in the image.
+
+                ```
+                ASPNETCORE_ENVIRONMENT=Production
+                DATABASE_CONNECTION_STRING=Data Source=/data/learnhub.db
+                Seed__AdminPassword=(set in the platform, never in Git)
+                ```
+
+                > A double underscore (`Seed__AdminPassword`) represents the nested setting `Seed:AdminPassword` in ASP.NET Core configuration.
+
+                ## Secrets never go into Git
+
+                Passwords, API keys and connection strings with credentials are entered in the hosting platform's variables screen. The repository contains only a `.env.example` file with placeholder values, and `.gitignore` stops real `.env` files from being committed.
+
+                ## Data must outlive the container
+
+                Containers are replaced on every deployment and anything written inside them is lost. A **persistent volume** is storage mounted into the container, for example at `/data`, that survives redeployments. Put the SQLite database file, uploaded files and ASP.NET Core Data Protection keys there.
+
+                ## Deployment checklist
+
+                - The health check endpoint (for example `/health`) returns 200.
+                - Database migrations run once on start-up.
+                - HTTPS is enforced and cookies are marked `Secure`.
+                - Error pages never show stack traces in production.
+                """),
+            new("Deployment exercise: plan the environment variables", ResourceType.Exercise, "Decide which settings belong in the platform and which in the repository.", 10,
+                Body: """
+                    ## Your task
+
+                    A classmate wants to deploy a course-booking app. Their `appsettings.json` currently contains:
+
+                    - the log level
+                    - the SQLite connection string `Data Source=/data/booking.db`
+                    - the administrator's password
+                    - the name of the site shown in the footer
+
+                    For each setting, decide whether it should stay in `appsettings.json` (committed to Git) or move to an environment variable set in the hosting platform. Give a one-sentence reason for each.
+                    """,
+                Solution: """
+                    - **Log level** – can stay in `appsettings.json` as a default; production can override it with an environment variable if needed.
+                    - **Connection string** – move to an environment variable, because the database path depends on where the platform mounts its volume.
+                    - **Administrator password** – must be an environment variable (a secret). Anything committed to Git should be treated as public.
+                    - **Site name** – can stay in `appsettings.json`; it is not secret and rarely changes between environments.
+                    """),
+            new("Railway documentation", ResourceType.Link,
+                "Official guides for deploying services, adding volumes and setting variables on Railway.",
+                15, Url: "https://docs.railway.com/"),
+            new("Firebase Hosting documentation", ResourceType.Link,
+                "Google's guide to publishing static sites on Firebase Hosting's global CDN.",
+                10, Url: "https://firebase.google.com/docs/hosting")
         ],
         Quizzes:
         [
-            new("Cloud concepts quiz", "Service models, responsibility, scaling and configuration.", 60,
+            new("Deployment concepts quiz", "Hosting models, containers, configuration and persistent data.", 60,
             [
-                new("Azure App Service, where you deploy code and Azure manages the servers, is an example of…",
-                    "Platform as a Service provides a managed runtime: you supply the application and the provider manages the servers and operating system.",
-                    1, "IaaS", "PaaS", "SaaS", "On-premises hosting"),
-                new("Under the shared responsibility model, who is responsible for the data you store in a cloud application?",
-                    "Providers secure the platform, but customers always remain responsible for their data, accounts and access.",
-                    1, "Only the cloud provider", "You, the customer", "Nobody", "The internet service provider"),
-                new("What does elastic scaling mean?",
-                    "Elasticity adds capacity during busy periods and removes it when demand drops, so you pay for what you use.",
-                    0, "Resources grow and shrink with demand", "Servers are moved between regions every night", "Prices stay fixed regardless of usage", "Data is copied to every region"),
-                new("Where should a production database password for an App Service app be stored?",
-                    "App Service application settings or Azure Key Vault inject values at runtime, so they are never committed to source control.",
-                    1, "In appsettings.json in the Git repository", "In App Service application settings or Azure Key Vault", "In a JavaScript file", "In the README"),
-                new("What is an Azure region?",
-                    "A region is a geographic area containing one or more datacentres; choosing one close to users reduces latency.",
-                    1, "A pricing plan", "A set of datacentres in a geographic area", "A virtual network", "A group of users")
+                new("Why can't Firebase Hosting run an ASP.NET Core MVC application by itself?",
+                    "Static hosts serve files as they are. MVC renders pages with C# code on the server for every request, which needs a server-side host.",
+                    1, "It does not support HTTPS", "It serves static files and cannot execute server-side C#", "It only works with Java applications", "It cannot serve HTML files") { Points = 2 },
+                new("What is the main benefit of a multi-stage Dockerfile?",
+                    "The SDK is only used to build; the final image contains just the runtime and the published app, so it is smaller and has less attack surface.",
+                    0, "The final image is smaller because build tools are left behind", "The application runs faster on every request", "It removes the need for a database", "It makes the container run as root"),
+                new("Where should the production administrator password be stored?",
+                    "Secrets are entered as environment variables in the hosting platform, so they never reach the Git history.",
+                    1, "In appsettings.json", "In an environment variable set in the hosting platform", "In the README as a reminder", "In a JavaScript file") { Points = 2 },
+                new("What happens to a SQLite file written inside a container without a volume when the app is redeployed?",
+                    "A redeployment replaces the container, so files written inside it are lost unless they live on a persistent volume.",
+                    2, "It is copied to the new container", "It is uploaded to GitHub", "It is lost with the old container", "It is converted to SQL Server"),
+                new("Which environment variable does a platform such as Railway use to tell the app which port to listen on?",
+                    "Railway sets PORT, and the application must listen on it for the platform's routing and health checks to work.",
+                    3, "HOST", "URL", "APP_PORT_NUMBER", "PORT")
             ])
         ]);
 }

@@ -24,5 +24,8 @@ public enum ResourceType
     Image = 4,
 
     [Display(Name = "External link")]
-    Link = 5
+    Link = 5,
+
+    [Display(Name = "Exercise")]
+    Exercise = 6
 }

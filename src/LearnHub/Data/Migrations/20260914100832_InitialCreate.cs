@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace LearnHub.Data.Migrations.Sqlite
+namespace LearnHub.Data.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -234,11 +234,14 @@ namespace LearnHub.Data.Migrations.Sqlite
                     UserId = table.Column<string>(type: "TEXT", nullable: false),
                     CourseId = table.Column<int>(type: "INTEGER", nullable: false),
                     EnrolledAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastAccessedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    LastAccessedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    CompletionPercentage = table.Column<int>(type: "INTEGER", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Enrollments", x => x.Id);
+                    table.CheckConstraint("CK_Enrollments_CompletionPercentage", "CompletionPercentage BETWEEN 0 AND 100");
                     table.ForeignKey(
                         name: "FK_Enrollments_AspNetUsers_UserId",
                         column: x => x.UserId,
@@ -264,6 +267,7 @@ namespace LearnHub.Data.Migrations.Sqlite
                     Summary = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
                     Type = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
                     Body = table.Column<string>(type: "TEXT", maxLength: 20000, nullable: true),
+                    Solution = table.Column<string>(type: "TEXT", maxLength: 20000, nullable: true),
                     ExternalUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
                     FilePath = table.Column<string>(type: "TEXT", maxLength: 260, nullable: true),
                     FileName = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
@@ -272,6 +276,7 @@ namespace LearnHub.Data.Migrations.Sqlite
                     EstimatedMinutes = table.Column<int>(type: "INTEGER", nullable: true),
                     SortOrder = table.Column<int>(type: "INTEGER", nullable: false),
                     IsPreview = table.Column<bool>(type: "INTEGER", nullable: false),
+                    IsPublished = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -349,11 +354,13 @@ namespace LearnHub.Data.Migrations.Sqlite
                     QuizId = table.Column<int>(type: "INTEGER", nullable: false),
                     Text = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     Explanation = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    Points = table.Column<int>(type: "INTEGER", nullable: false),
                     SortOrder = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Questions", x => x.Id);
+                    table.CheckConstraint("CK_Questions_Points", "Points BETWEEN 1 AND 100");
                     table.ForeignKey(
                         name: "FK_Questions_Quizzes_QuizId",
                         column: x => x.QuizId,
@@ -370,9 +377,12 @@ namespace LearnHub.Data.Migrations.Sqlite
                         .Annotation("Sqlite:Autoincrement", true),
                     QuizId = table.Column<int>(type: "INTEGER", nullable: false),
                     UserId = table.Column<string>(type: "TEXT", nullable: false),
-                    SubmittedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CorrectCount = table.Column<int>(type: "INTEGER", nullable: false),
                     QuestionCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    Score = table.Column<int>(type: "INTEGER", nullable: false),
+                    MaxScore = table.Column<int>(type: "INTEGER", nullable: false),
                     ScorePercent = table.Column<int>(type: "INTEGER", nullable: false),
                     Passed = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
@@ -380,6 +390,7 @@ namespace LearnHub.Data.Migrations.Sqlite
                 {
                     table.PrimaryKey("PK_QuizAttempts", x => x.Id);
                     table.CheckConstraint("CK_QuizAttempts_CorrectCount", "CorrectCount >= 0 AND CorrectCount <= QuestionCount");
+                    table.CheckConstraint("CK_QuizAttempts_Score", "Score >= 0 AND Score <= MaxScore");
                     table.CheckConstraint("CK_QuizAttempts_ScorePercent", "ScorePercent BETWEEN 0 AND 100");
                     table.ForeignKey(
                         name: "FK_QuizAttempts_AspNetUsers_UserId",
@@ -520,15 +531,20 @@ namespace LearnHub.Data.Migrations.Sqlite
                 column: "Title");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Enrollments_CourseId",
+                name: "IX_Enrollments_CourseId_CompletionPercentage",
                 table: "Enrollments",
-                column: "CourseId");
+                columns: new[] { "CourseId", "CompletionPercentage" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Enrollments_UserId_CourseId",
                 table: "Enrollments",
                 columns: new[] { "UserId", "CourseId" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LearningResources_CourseId_IsPublished",
+                table: "LearningResources",
+                columns: new[] { "CourseId", "IsPublished" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_LearningResources_CourseId_SortOrder",
@@ -557,14 +573,14 @@ namespace LearnHub.Data.Migrations.Sqlite
                 column: "SelectedOptionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_QuizAttempts_CompletedAt",
+                table: "QuizAttempts",
+                column: "CompletedAt");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_QuizAttempts_QuizId",
                 table: "QuizAttempts",
                 column: "QuizId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_QuizAttempts_SubmittedAt",
-                table: "QuizAttempts",
-                column: "SubmittedAt");
 
             migrationBuilder.CreateIndex(
                 name: "IX_QuizAttempts_UserId_QuizId",

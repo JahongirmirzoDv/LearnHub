@@ -8,7 +8,8 @@ namespace LearnHub.Data.Seed;
 
 /// <summary>
 /// Runs once at start-up: applies migrations, creates the roles, creates the first administrator from
-/// configuration (user-secrets or environment variables – never from source code) and seeds demo content.
+/// configuration (environment variables, or generated DEMO ONLY passwords in Development – never from source code)
+/// and seeds demo content.
 /// </summary>
 public sealed class DatabaseInitializer(
     ApplicationDbContext db,
@@ -17,6 +18,7 @@ public sealed class DatabaseInitializer(
     DemoDataSeeder demoDataSeeder,
     IOptions<DatabaseOptions> databaseOptions,
     IOptions<SeedOptions> seedOptions,
+    IHostEnvironment environment,
     TimeProvider clock,
     ILogger<DatabaseInitializer> logger)
 {
@@ -37,6 +39,13 @@ public sealed class DatabaseInitializer(
 
         await EnsureRolesAsync();
         await EnsureAdministratorAsync();
+
+        if (environment.IsDevelopment())
+        {
+            logger.LogInformation(
+                "DEMO ONLY sign-in details for {AdminEmail} and {StudentEmail} are in App_Data/{FileName} unless configured.",
+                seedOptions.Value.AdminEmail, seedOptions.Value.DemoStudentEmail, DevelopmentSeedPasswords.FileName);
+        }
 
         if (seedOptions.Value.DemoData)
         {
@@ -74,8 +83,8 @@ public sealed class DatabaseInitializer(
         if (string.IsNullOrWhiteSpace(options.AdminPassword))
         {
             logger.LogWarning(
-                "No administrator account exists for {Email}. Set Seed:AdminPassword with 'dotnet user-secrets' " +
-                "(development) or the Seed__AdminPassword environment variable (production), then restart.",
+                "No administrator account exists for {Email}. Set the Seed__AdminPassword environment variable " +
+                "(or Seed:AdminPassword with 'dotnet user-secrets'), then restart.",
                 email);
             return;
         }

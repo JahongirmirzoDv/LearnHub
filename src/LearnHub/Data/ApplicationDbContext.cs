@@ -5,12 +5,10 @@ using Microsoft.EntityFrameworkCore;
 namespace LearnHub.Data;
 
 /// <summary>
-/// The LearnHub database model (Identity tables + learning domain). It is abstract because each
-/// database provider has its own subclass with its own migrations: <see cref="SqliteDbContext"/>
-/// for development and <see cref="SqlServerDbContext"/> for Azure SQL. Application code only ever
-/// depends on this type.
+/// The LearnHub database model (Identity tables + learning domain), stored in SQLite and created from the
+/// Code First migrations in <c>Data/Migrations</c>.
 /// </summary>
-public abstract class ApplicationDbContext(DbContextOptions options) : IdentityDbContext<ApplicationUser>(options)
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Category> Categories => Set<Category>();
 
@@ -85,9 +83,3 @@ public abstract class ApplicationDbContext(DbContextOptions options) : IdentityD
         }
     }
 }
-
-/// <summary>SQLite model used for local development and automated tests.</summary>
-public sealed class SqliteDbContext(DbContextOptions<SqliteDbContext> options) : ApplicationDbContext(options);
-
-/// <summary>SQL Server / Azure SQL model used in production.</summary>
-public sealed class SqlServerDbContext(DbContextOptions<SqlServerDbContext> options) : ApplicationDbContext(options);

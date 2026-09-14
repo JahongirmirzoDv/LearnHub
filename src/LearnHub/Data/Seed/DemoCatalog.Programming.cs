@@ -187,6 +187,47 @@ internal static partial class DemoCatalog
 
                 Write a `Student` class with a `FullName` property and a method that returns the student's initials.
                 """),
+            new("Exercise: a grade calculator", ResourceType.Exercise, "Combine variables, decisions and a method in one small program.", 15,
+                Body: """
+                    ## Your task
+
+                    Write a method `string GradeFor(int score)` that turns a quiz score (0–100) into a grade:
+
+                    - 80 or more → `"Distinction"`
+                    - 65 to 79 → `"Credit"`
+                    - 50 to 64 → `"Pass"`
+                    - below 50 → `"Fail"`
+
+                    Then call it for the scores 92, 70, 50 and 12 and print each result. Scores outside 0–100 should throw an `ArgumentOutOfRangeException`.
+
+                    Try it yourself before revealing the solution.
+                    """,
+                Solution: """
+                    ```
+                    static string GradeFor(int score)
+                    {
+                        if (score is < 0 or > 100)
+                        {
+                            throw new ArgumentOutOfRangeException(nameof(score), "Scores run from 0 to 100.");
+                        }
+
+                        return score switch
+                        {
+                            >= 80 => "Distinction",
+                            >= 65 => "Credit",
+                            >= 50 => "Pass",
+                            _ => "Fail"
+                        };
+                    }
+
+                    foreach (var score in new[] { 92, 70, 50, 12 })
+                    {
+                        Console.WriteLine($"{score}: {GradeFor(score)}");
+                    }
+                    ```
+
+                    The `switch` expression checks the patterns from top to bottom, so each band only needs its lower limit.
+                    """),
             new("C# syntax cheat sheet", ResourceType.Pdf, "A two-page reference of the syntax used in this course. Keep it open while you practise.", 5, File: "csharp-cheat-sheet.pdf")
         ],
         Quizzes:
@@ -336,7 +377,7 @@ internal static partial class DemoCatalog
 
     private static SeedCourse GitForTeams() => new(
         Title: "Git and GitHub for Team Projects",
-        Category: Programming,
+        Category: SoftwareEngineering,
         Difficulty: DifficultyLevel.Beginner,
         DurationMinutes: 240,
         Instructor: "Mr. Arjun Pillai",

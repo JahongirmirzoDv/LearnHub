@@ -14,6 +14,9 @@ public class Question
     /// <summary>Shown to the student on the result page to explain the correct answer.</summary>
     public string? Explanation { get; set; }
 
+    /// <summary>Weight of the question in the score (1–100); a correct answer earns all points, a wrong one none.</summary>
+    public int Points { get; set; } = 1;
+
     public int SortOrder { get; set; }
 
     public ICollection<AnswerOption> Options { get; set; } = [];
