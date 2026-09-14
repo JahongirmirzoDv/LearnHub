@@ -16,13 +16,13 @@ public sealed class CategoryServiceTests
         await using var database = await TestDatabase.CreateAsync();
         var service = new CategoryService(database.Context, NullLogger<CategoryService>.Instance);
 
-        var created = await service.CreateAsync(new CategoryFormViewModel { Name = "Databases", IconName = "database" });
-        var duplicate = await service.CreateAsync(new CategoryFormViewModel { Name = "  DATABASES ", IconName = "database" });
+        var created = await service.CreateAsync(new CategoryFormViewModel { Name = "Databases", IconName = "database" }, cancellationToken: TestContext.Current.CancellationToken);
+        var duplicate = await service.CreateAsync(new CategoryFormViewModel { Name = "  DATABASES ", IconName = "database" }, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(created.Succeeded);
         Assert.False(duplicate.Succeeded);
         Assert.Contains("already exists", duplicate.Error);
-        Assert.Equal(1, await database.NewContext().Categories.CountAsync());
+        Assert.Equal(1, await database.NewContext().Categories.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -33,11 +33,11 @@ public sealed class CategoryServiceTests
         await database.AddCourseAsync(category);
         var service = new CategoryService(database.Context, NullLogger<CategoryService>.Instance);
 
-        var result = await service.DeleteAsync(category.Id);
+        var result = await service.DeleteAsync(category.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Contains("still contains 1 course", result.Error);
-        Assert.True(await database.NewContext().Categories.AnyAsync(c => c.Id == category.Id));
+        Assert.True(await database.NewContext().Categories.AnyAsync(c => c.Id == category.Id, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -47,8 +47,8 @@ public sealed class CategoryServiceTests
         var category = await database.AddCategoryAsync();
         var service = new CategoryService(database.Context, NullLogger<CategoryService>.Instance);
 
-        Assert.True((await service.DeleteAsync(category.Id)).Succeeded);
-        Assert.True((await service.DeleteAsync(category.Id)).IsNotFound);
+        Assert.True((await service.DeleteAsync(category.Id, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await service.DeleteAsync(category.Id, cancellationToken: TestContext.Current.CancellationToken)).IsNotFound);
     }
 }
 
@@ -65,13 +65,13 @@ public sealed class CourseCatalogServiceTests
         await database.AddCourseAsync(data, "Advanced SQL Tuning", published: false);
         var catalog = CreateCatalog(database);
 
-        var bySql = await catalog.SearchAsync(new CourseSearchQuery { Q = "sql" }, userId: null);
+        var bySql = await catalog.SearchAsync(new CourseSearchQuery { Q = "sql" }, userId: null, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(["SQL Joins in Practice"], bySql.Results.Items.Select(c => c.Title));
 
-        var byCategory = await catalog.SearchAsync(new CourseSearchQuery { CategoryId = programming.Id }, userId: null);
+        var byCategory = await catalog.SearchAsync(new CourseSearchQuery { CategoryId = programming.Id }, userId: null, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(["C# Fundamentals"], byCategory.Results.Items.Select(c => c.Title));
 
-        var wildcard = await catalog.SearchAsync(new CourseSearchQuery { Q = "%" }, userId: null);
+        var wildcard = await catalog.SearchAsync(new CourseSearchQuery { Q = "%" }, userId: null, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Empty(wildcard.Results.Items);
     }
 
@@ -83,8 +83,8 @@ public sealed class CourseCatalogServiceTests
         var draft = await database.AddCourseAsync(category, "Draft course", published: false);
         var catalog = CreateCatalog(database);
 
-        Assert.Null(await catalog.GetDetailsAsync(draft.Id, userId: null, isAdmin: false));
-        Assert.NotNull(await catalog.GetDetailsAsync(draft.Id, userId: null, isAdmin: true));
+        Assert.Null(await catalog.GetDetailsAsync(draft.Id, userId: null, isAdmin: false, cancellationToken: TestContext.Current.CancellationToken));
+        Assert.NotNull(await catalog.GetDetailsAsync(draft.Id, userId: null, isAdmin: true, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     private static CourseCatalogService CreateCatalog(TestDatabase database) =>
@@ -105,11 +105,11 @@ public sealed class EnrollmentAndProgressServiceTests
         var draft = await database.AddCourseAsync(category, "Draft", published: false);
         var enrollments = CreateEnrollmentService(database);
 
-        Assert.True((await enrollments.EnrollAsync(user.Id, course.Id)).Succeeded);
-        var second = await enrollments.EnrollAsync(user.Id, course.Id);
+        Assert.True((await enrollments.EnrollAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        var second = await enrollments.EnrollAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(second.Succeeded);
-        Assert.True((await enrollments.EnrollAsync(user.Id, draft.Id)).IsNotFound);
-        Assert.Equal(1, await database.NewContext().Enrollments.CountAsync());
+        Assert.True((await enrollments.EnrollAsync(user.Id, draft.Id, cancellationToken: TestContext.Current.CancellationToken)).IsNotFound);
+        Assert.Equal(1, await database.NewContext().Enrollments.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public sealed class EnrollmentAndProgressServiceTests
         var course = await database.AddCourseAsync(category, resourceCount: 3, withQuiz: true);
         var progress = new ProgressService(database.Context);
 
-        Assert.Equal(new(0, 4), await progress.GetForCourseAsync(user.Id, course.Id));
+        Assert.Equal(new(0, 4), await progress.GetForCourseAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken));
 
         database.Context.ResourceCompletions.Add(new ResourceCompletion { UserId = user.Id, LearningResourceId = course.Resources.First().Id });
         database.Context.QuizAttempts.Add(new QuizAttempt
@@ -133,9 +133,9 @@ public sealed class EnrollmentAndProgressServiceTests
             ScorePercent = 100,
             Passed = true
         });
-        await database.Context.SaveChangesAsync();
+        await database.Context.SaveChangesAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        var result = await progress.GetForCourseAsync(user.Id, course.Id);
+        var result = await progress.GetForCourseAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(2, result.CompletedItems);
         Assert.Equal(4, result.TotalItems);
         Assert.Equal(50, result.Percent);
@@ -149,14 +149,14 @@ public sealed class EnrollmentAndProgressServiceTests
         var category = await database.AddCategoryAsync();
         var course = await database.AddCourseAsync(category, resourceCount: 2, withQuiz: false);
         var enrollments = CreateEnrollmentService(database);
-        await enrollments.EnrollAsync(user.Id, course.Id);
+        await enrollments.EnrollAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken);
         database.Context.ResourceCompletions.Add(new ResourceCompletion { UserId = user.Id, LearningResourceId = course.Resources.First().Id });
-        await database.Context.SaveChangesAsync();
+        await database.Context.SaveChangesAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.True((await enrollments.LeaveAsync(user.Id, course.Id)).Succeeded);
-        await enrollments.EnrollAsync(user.Id, course.Id);
+        Assert.True((await enrollments.LeaveAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        await enrollments.EnrollAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken);
 
-        var progress = await new ProgressService(database.NewContext()).GetForCourseAsync(user.Id, course.Id);
+        var progress = await new ProgressService(database.NewContext()).GetForCourseAsync(user.Id, course.Id, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(50, progress.Percent);
     }
 

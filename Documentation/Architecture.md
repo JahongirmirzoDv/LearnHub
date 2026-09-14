@@ -40,8 +40,9 @@ LearnHub/
 ├── .github/workflows/        ci.yml · deploy.yml · pages.yml · ef-migrations.yml
 ├── src/LearnHub/             ASP.NET Core MVC application
 ├── tests/LearnHub.Tests/     xUnit unit + integration tests (WebApplicationFactory)
-├── tests/e2e/                Playwright browser tests (mobile / tablet / desktop)
-├── infra/                    Azure provisioning script
+├── tests/e2e/                Playwright browser and accessibility tests (mobile / tablet / desktop)
+├── scripts/                  smoke test for any running instance, CI helpers
+├── infra/                    Azure provisioning script (run in Azure Cloud Shell)
 ├── Documentation/            Assignment documentation
 ├── docs/                     GitHub Pages presentation website (static)
 ├── LearnHub.sln
@@ -78,7 +79,7 @@ injection supplies the provider-specific subclass.
 | Course → Resources, Quizzes, Enrolments | Cascade | A course owns its content; the delete page shows the full impact before confirmation. |
 | Quiz → Questions → AnswerOptions | Cascade | Questions cannot exist without their quiz. |
 | Quiz → QuizAttempts → QuizAnswers | Cascade | Attempts are meaningless without the quiz. |
-| QuizAnswer → Question / AnswerOption | **Restrict** | Prevents SQL Server "multiple cascade paths"; services remove dependent answers explicitly inside a transaction. |
+| QuizAnswer → Question / AnswerOption | **Restrict** | Prevents SQL Server "multiple cascade paths". Services delete the dependent answers first with `ExecuteDeleteAsync` and then the parent, in one transaction run through the execution strategy (`Data/TransactionExtensions.cs`). Removing an answer option clears it from past answers instead, so attempts are kept. |
 | User → Enrolments, QuizAttempts, ResourceCompletions | Cascade | Removing an account removes that person's learning records. |
 | LearningResource → ResourceCompletions | Cascade | Completion records belong to the resource. |
 
@@ -154,9 +155,9 @@ controller cannot be added without protection. Ownership checks (IDOR) are done 
 | Overposting | Forms bind to ViewModels only. |
 | File uploads | Extension allow-list, size limit, magic-byte signature check, random file names, storage outside `wwwroot`, SVG/HTML never accepted. |
 | Video embeds | URLs parsed with strict host/ID rules and rebuilt as `youtube-nocookie.com` / `player.vimeo.com` embed URLs; CSP `frame-src` allow-list. |
-| Brute force | Identity lockout (5 attempts / 15 minutes) and rate limiting on login, registration and contact. |
+| Brute force | Identity lockout (5 attempts / 15 minutes) and a fixed-window rate limit (10 per minute per IP) on login, registration, password change and contact; honeypot field on the contact form. |
 | Session security | HttpOnly, SameSite=Lax, Secure (production) cookies; security stamp re-validated every 5 minutes so role changes and deactivation take effect. |
-| Secrets | Admin seed password and connection strings come from user-secrets (development) or App Service settings (production). Nothing sensitive is committed. |
+| Secrets | The admin seed password comes from user-secrets (development) or App Service settings (production). Azure SQL is reached with the web app's managed identity, so the production connection string has no password, and GitHub deploys through OpenID Connect. Nothing sensitive is committed. |
 | Information disclosure | Developer exception page only in Development; friendly error pages elsewhere; security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, HSTS). |
 
 ## 7. Front-end design
@@ -174,26 +175,37 @@ controller cannot be added without protection. Ownership checks (IDOR) are done 
 ## 8. Deployment architecture
 
 ```
-Developer → GitHub (main) ──► GitHub Actions CI (build, tests, SQL Server migration check, e2e)
-                          ├─► deploy.yml ──► Azure App Service (Linux, .NET 10) ──► Azure SQL Database
+Developer → GitHub (main) ──► ci.yml: build + 182 tests on SQLite · SQL Server 2022: migrations, 182 tests, smoke test
+                          │            · Playwright: 42 browser and accessibility checks on 3 screen sizes
+                          ├─► deploy.yml ──(OpenID Connect)──► Azure App Service (Linux, .NET 10)
+                          │                                          │ system-assigned managed identity
+                          │                                          ▼
+                          │                                    Azure SQL Database (Entra-only authentication)
                           └─► pages.yml  ──► GitHub Pages (static presentation site)
                                                    │ "Launch LearnHub"
                                                    └────────────► Azure App Service
 ```
 
-* GitHub Pages only hosts static files, so it presents the project; the ASP.NET Core
-  application itself runs on Azure App Service.
-* Production configuration is supplied through App Service settings (environment
-  variables): `ASPNETCORE_ENVIRONMENT`, `Database__Provider`, the `SqlServer` connection
-  string, `Storage__RootPath`, `Seed__AdminEmail`, `Seed__AdminPassword`.
-* Migration strategy: migrations are applied at application start-up
-  (`Database:ApplyMigrationsOnStartup`), which is safe for the single-instance student
-  deployment. The deploy workflow also publishes an idempotent SQL script as a build
-  artefact for review or manual application.
+* GitHub Pages only hosts static files, so it presents the project; the ASP.NET Core application itself runs on Azure
+  App Service. `pages.yml` points the launch buttons at the `AZURE_WEBAPP_URL` repository variable.
+* `infra/provision.sh` creates the App Service plan and web app, the Azure SQL server and free-offer database, the
+  database user for the web app's managed identity, the app settings, and a user-assigned identity federated with
+  GitHub's `production` environment and limited to Website Contributor on the web app.
+* Production configuration is supplied through App Service settings (environment variables):
+  `ASPNETCORE_ENVIRONMENT=Production`, `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` (TLS ends at the App Service front
+  end), `Database__Provider=SqlServer`, `ConnectionStrings__SqlServer` with
+  `Authentication=Active Directory Managed Identity`, `Storage__RootPath=/home/data/learnhub/storage`,
+  `Seed__AdminEmail` and `Seed__AdminPassword` (removed after the first login).
+* Migration strategy: migrations are applied at application start-up (`Database:ApplyMigrationsOnStartup`) under EF
+  Core's migration lock, which is safe for the single-instance deployment. The deploy workflow also publishes an
+  idempotent SQL script as a build artefact for review or manual application, and CI applies every migration to an
+  empty SQL Server database on each push.
+
+Full guide: [Deployment.md](Deployment.md).
 
 ## 9. Cloud-based development workflow
 
-Development machines with little free disk space do not need the .NET SDK locally:
-GitHub Actions restores, builds, tests, generates EF Core migrations
-(`ef-migrations.yml`) and runs browser tests in the cloud. Team members with the SDK
-installed can use the normal local commands documented in the README.
+Development machines with little free disk space do not need the .NET SDK locally: GitHub Actions restores, builds,
+runs the tests on SQLite and SQL Server, runs the browser and accessibility tests, generates EF Core migrations for both
+providers (`ef-migrations.yml`) and deploys. Team members with the SDK installed can use the normal local commands
+documented in the README.

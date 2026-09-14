@@ -6,5 +6,8 @@
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- CI passes -p:TreatWarningsAsErrors=true so the build stays warning-free. Newly published package
+         vulnerability advisories stay visible as warnings instead of breaking unrelated builds. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
   </PropertyGroup>
 </Project>

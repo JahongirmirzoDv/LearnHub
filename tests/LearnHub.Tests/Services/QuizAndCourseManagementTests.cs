@@ -22,16 +22,16 @@ public sealed class QuizServiceTests
         var firstQuestion = quiz.Questions.OrderBy(q => q.SortOrder).First();
         var correctOption = firstQuestion.Options.Single(o => o.IsCorrect);
 
-        var result = await service.SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int> { [firstQuestion.Id] = correctOption.Id });
+        var result = await service.SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int> { [firstQuestion.Id] = correctOption.Id }, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(ResourceAccess.Allowed, result.Access);
-        var attempt = await database.NewContext().QuizAttempts.Include(a => a.Answers).SingleAsync(a => a.Id == result.AttemptId);
+        var attempt = await database.NewContext().QuizAttempts.Include(a => a.Answers).SingleAsync(a => a.Id == result.AttemptId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(1, attempt.CorrectCount);
         Assert.Equal(2, attempt.QuestionCount);
         Assert.Equal(50, attempt.ScorePercent);
         Assert.True(attempt.Passed); // pass mark is 50 in the test data
         Assert.Equal(2, attempt.Answers.Count);
-        Assert.Equal(course.Id, (await service.GetResultAsync(attempt.Id, user.Id, isAdmin: false))!.CourseId);
+        Assert.Equal(course.Id, (await service.GetResultAsync(attempt.Id, user.Id, isAdmin: false, cancellationToken: TestContext.Current.CancellationToken))!.CourseId);
     }
 
     [Fact]
@@ -41,10 +41,10 @@ public sealed class QuizServiceTests
         var (owner, _, quiz) = await CreateEnrolledStudentAsync(database);
         var other = await database.AddUserAsync("Other Student");
         var service = CreateQuizService(database);
-        var submitted = await service.SubmitAsync(quiz.Id, owner.Id, new Dictionary<int, int>());
+        var submitted = await service.SubmitAsync(quiz.Id, owner.Id, new Dictionary<int, int>(), cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Null(await service.GetResultAsync(submitted.AttemptId!.Value, other.Id, isAdmin: false));
-        Assert.NotNull(await service.GetResultAsync(submitted.AttemptId.Value, other.Id, isAdmin: true));
+        Assert.Null(await service.GetResultAsync(submitted.AttemptId!.Value, other.Id, isAdmin: false, cancellationToken: TestContext.Current.CancellationToken));
+        Assert.NotNull(await service.GetResultAsync(submitted.AttemptId.Value, other.Id, isAdmin: true, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public sealed class QuizServiceTests
         var service = CreateQuizService(database);
         var quizId = course.Quizzes.First().Id;
 
-        Assert.Equal(ResourceAccess.RequiresEnrollment, (await service.GetQuizToTakeAsync(quizId, outsider.Id)).Access);
-        Assert.Equal(ResourceAccess.RequiresEnrollment, (await service.SubmitAsync(quizId, outsider.Id, new Dictionary<int, int>())).Access);
-        Assert.Equal(0, await database.NewContext().QuizAttempts.CountAsync());
+        Assert.Equal(ResourceAccess.RequiresEnrollment, (await service.GetQuizToTakeAsync(quizId, outsider.Id, cancellationToken: TestContext.Current.CancellationToken)).Access);
+        Assert.Equal(ResourceAccess.RequiresEnrollment, (await service.SubmitAsync(quizId, outsider.Id, new Dictionary<int, int>(), cancellationToken: TestContext.Current.CancellationToken)).Access);
+        Assert.Equal(0, await database.NewContext().QuizAttempts.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class QuizServiceTests
         await using var database = await TestDatabase.CreateAsync();
         var (user, _, quiz) = await CreateEnrolledStudentAsync(database);
 
-        var take = await CreateQuizService(database).GetQuizToTakeAsync(quiz.Id, user.Id);
+        var take = await CreateQuizService(database).GetQuizToTakeAsync(quiz.Id, user.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(ResourceAccess.Allowed, take.Access);
         // TakeQuizOption only has Id and Text; this guards against someone adding IsCorrect later.
@@ -116,13 +116,13 @@ public sealed class QuestionManagementServiceTests
             CorrectOptionIndex = 0
         };
 
-        var result = await service.UpdateAsync(questions[0].Id, model);
+        var result = await service.UpdateAsync(questions[0].Id, model, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         await using var verify = database.NewContext();
-        Assert.Equal(foreignOption.Text, (await verify.AnswerOptions.SingleAsync(o => o.Id == foreignOption.Id)).Text);
-        Assert.Equal(2, await verify.AnswerOptions.CountAsync(o => o.QuestionId == questions[0].Id));
-        Assert.Equal(1, await verify.AnswerOptions.CountAsync(o => o.QuestionId == questions[0].Id && o.IsCorrect));
+        Assert.Equal(foreignOption.Text, (await verify.AnswerOptions.SingleAsync(o => o.Id == foreignOption.Id, cancellationToken: TestContext.Current.CancellationToken)).Text);
+        Assert.Equal(2, await verify.AnswerOptions.CountAsync(o => o.QuestionId == questions[0].Id, cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal(1, await verify.AnswerOptions.CountAsync(o => o.QuestionId == questions[0].Id && o.IsCorrect, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public sealed class QuestionManagementServiceTests
         var question = quiz.Questions.OrderBy(q => q.SortOrder).First();
         var wrongOption = question.Options.Single(o => !o.IsCorrect);
         var rightOption = question.Options.Single(o => o.IsCorrect);
-        await QuizServiceTests.CreateQuizService(database).SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int> { [question.Id] = wrongOption.Id });
+        await QuizServiceTests.CreateQuizService(database).SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int> { [question.Id] = wrongOption.Id }, cancellationToken: TestContext.Current.CancellationToken);
         var service = new QuestionManagementService(database.Context, NullLogger<QuestionManagementService>.Instance);
 
         var result = await service.UpdateAsync(question.Id, new QuestionFormViewModel
@@ -143,14 +143,14 @@ public sealed class QuestionManagementServiceTests
             Text = question.Text,
             Options = [new() { Id = rightOption.Id, Text = rightOption.Text }, new() { Text = "A brand new wrong answer" }],
             CorrectOptionIndex = 0
-        });
+        }, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         await using var verify = database.NewContext();
-        Assert.False(await verify.AnswerOptions.AnyAsync(o => o.Id == wrongOption.Id));
-        var answer = await verify.QuizAnswers.SingleAsync(a => a.QuestionId == question.Id);
+        Assert.False(await verify.AnswerOptions.AnyAsync(o => o.Id == wrongOption.Id, cancellationToken: TestContext.Current.CancellationToken));
+        var answer = await verify.QuizAnswers.SingleAsync(a => a.QuestionId == question.Id, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(answer.SelectedOptionId);
-        Assert.Equal(1, await verify.QuizAttempts.CountAsync());
+        Assert.Equal(1, await verify.QuizAttempts.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 }
 
@@ -161,7 +161,7 @@ public sealed class CourseManagementServiceTests
     {
         await using var database = await TestDatabase.CreateAsync();
         var (user, course, quiz) = await QuizServiceTests.CreateEnrolledStudentAsync(database);
-        await QuizServiceTests.CreateQuizService(database).SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int>());
+        await QuizServiceTests.CreateQuizService(database).SubmitAsync(quiz.Id, user.Id, new Dictionary<int, int>(), cancellationToken: TestContext.Current.CancellationToken);
         var storageRoot = Path.Combine(Path.GetTempPath(), "learnhub-tests", Guid.NewGuid().ToString("N"));
         var service = new CourseManagementService(
             database.Context,
@@ -169,18 +169,18 @@ public sealed class CourseManagementServiceTests
             new FileStorageService(Options.Create(new LearnHub.Infrastructure.StorageOptions { RootPath = storageRoot }), new TestHostEnvironment(), NullLogger<FileStorageService>.Instance),
             NullLogger<CourseManagementService>.Instance);
 
-        var result = await service.DeleteAsync(course.Id);
+        var result = await service.DeleteAsync(course.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         await using var verify = database.NewContext();
-        Assert.False(await verify.Courses.AnyAsync());
-        Assert.False(await verify.LearningResources.AnyAsync());
-        Assert.False(await verify.Quizzes.AnyAsync());
-        Assert.False(await verify.Questions.AnyAsync());
-        Assert.False(await verify.QuizAttempts.AnyAsync());
-        Assert.False(await verify.QuizAnswers.AnyAsync());
-        Assert.False(await verify.Enrollments.AnyAsync());
-        Assert.True(await verify.Users.AnyAsync(u => u.Id == user.Id));
+        Assert.False(await verify.Courses.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.False(await verify.LearningResources.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.False(await verify.Quizzes.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.False(await verify.Questions.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.False(await verify.QuizAttempts.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.False(await verify.QuizAnswers.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.False(await verify.Enrollments.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.True(await verify.Users.AnyAsync(u => u.Id == user.Id, cancellationToken: TestContext.Current.CancellationToken));
         Directory.Delete(storageRoot, recursive: true);
     }
 

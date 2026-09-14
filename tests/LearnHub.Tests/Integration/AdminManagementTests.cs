@@ -66,7 +66,7 @@ public sealed class AdminManagementTests(LearnHubWebApplicationFactory factory) 
             ["IconName"] = "not-an-icon"
         });
 
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("Please enter a category name.", html);
     }
@@ -80,7 +80,7 @@ public sealed class AdminManagementTests(LearnHubWebApplicationFactory factory) 
         var invalid = await admin.SubmitMultipartFormAsync("/Admin/Courses/Create", "/Admin/Courses/Create",
             CourseFields(categoryId, title: ""), "ThumbnailFile", "cover.png", PngBytes, "image/png");
         Assert.Equal(HttpStatusCode.OK, invalid.StatusCode);
-        Assert.Contains("Please enter a course title.", await invalid.Content.ReadAsStringAsync());
+        Assert.Contains("Please enter a course title.", await invalid.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
 
         var title = $"NoSQL Databases {Guid.NewGuid():N}"[..24];
         var create = await admin.SubmitMultipartFormAsync("/Admin/Courses/Create", "/Admin/Courses/Create",
@@ -93,11 +93,11 @@ public sealed class AdminManagementTests(LearnHubWebApplicationFactory factory) 
         var course = await factory.WithDbAsync(db => db.Courses.SingleAsync(c => c.Id == id));
         Assert.StartsWith("/media/thumbnails/", course.ThumbnailPath);
         Assert.False(course.IsPublished);
-        Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync(course.ThumbnailPath)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync(course.ThumbnailPath, cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
 
         // Drafts are hidden from the public catalogue until published.
         var guest = factory.CreateBrowserClient();
-        Assert.Equal(HttpStatusCode.NotFound, (await guest.GetAsync($"/Courses/Details/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await guest.GetAsync($"/Courses/Details/{id}", cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
 
         var edit = await admin.SubmitMultipartFormAsync($"/Admin/Courses/Edit/{id}", $"/Admin/Courses/Edit/{id}",
             CourseFields(categoryId, title + " v2"), "ThumbnailFile", "cover.png", PngBytes, "image/png");
@@ -132,20 +132,20 @@ public sealed class AdminManagementTests(LearnHubWebApplicationFactory factory) 
         var fake = await admin.SubmitMultipartFormAsync($"/Admin/Resources/Create?courseId={courseId}", "/Admin/Resources/Create",
             ResourceFields(courseId, "Fake PDF"), "UploadFile", "notes.pdf", "<html>not a pdf</html>"u8.ToArray(), "application/pdf");
         Assert.Equal(HttpStatusCode.OK, fake.StatusCode);
-        Assert.Contains("The file content does not match an allowed file type.", await fake.Content.ReadAsStringAsync());
+        Assert.Contains("The file content does not match an allowed file type.", await fake.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
 
         var pdf = await admin.SubmitMultipartFormAsync($"/Admin/Resources/Create?courseId={courseId}", "/Admin/Resources/Create",
             ResourceFields(courseId, "Pricing calculator notes"), "UploadFile", "pricing notes.pdf", PdfBytes, "application/pdf");
         Assert.Equal(HttpStatusCode.Redirect, pdf.StatusCode);
 
         var pdfId = await factory.WithDbAsync(db => db.LearningResources.Where(r => r.Title == "Pricing calculator notes").Select(r => r.Id).SingleAsync());
-        var file = await admin.GetAsync($"/Resources/Open/{pdfId}");
+        var file = await admin.GetAsync($"/Resources/Open/{pdfId}", cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, file.StatusCode);
         Assert.Equal("application/pdf", file.Content.Headers.ContentType?.MediaType);
 
         var delete = await admin.SubmitFormAsync($"/Admin/Resources/Delete/{pdfId}", $"/Admin/Resources/Delete/{pdfId}", []);
         Assert.Equal($"/Admin/Courses/Details/{courseId}", delete.LocationPath());
-        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/Resources/Open/{pdfId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/Resources/Open/{pdfId}", cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public sealed class AdminManagementTests(LearnHubWebApplicationFactory factory) 
 
         await admin.SubmitFormAsync(detailsUrl, $"/Admin/Users/Deactivate/{userId}", []);
         var blocked = await factory.CreateBrowserClient().LoginAsync(email, LearnHubWebApplicationFactory.NewUserPassword);
-        Assert.Contains("This account is locked.", await blocked.Content.ReadAsStringAsync());
+        Assert.Contains("This account is locked.", await blocked.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
 
         await admin.SubmitFormAsync(detailsUrl, $"/Admin/Users/Reactivate/{userId}", []);
         var allowed = await factory.CreateBrowserClient().LoginAsync(email, LearnHubWebApplicationFactory.NewUserPassword);
@@ -223,7 +223,7 @@ public sealed class AdminManagementTests(LearnHubWebApplicationFactory factory) 
         Assert.Equal(HttpStatusCode.Redirect, first.StatusCode);
 
         var duplicate = await admin.SubmitFormAsync("/Admin/Enrollments/Create", "/Admin/Enrollments/Create", fields);
-        Assert.Contains("This student is already enrolled in that course.", await duplicate.Content.ReadAsStringAsync());
+        Assert.Contains("This student is already enrolled in that course.", await duplicate.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
 
         var enrollmentId = await factory.WithDbAsync(db => db.Enrollments.Where(e => e.User.Email == email).Select(e => e.Id).SingleAsync());
         var remove = await admin.SubmitFormAsync($"/Admin/Enrollments/Delete/{enrollmentId}", $"/Admin/Enrollments/Delete/{enrollmentId}", []);

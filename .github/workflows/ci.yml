@@ -47,8 +47,8 @@ jobs:
       - name: Restore
         run: dotnet restore LearnHub.sln
 
-      - name: Build (warnings reported)
-        run: dotnet build LearnHub.sln --configuration Release --no-restore
+      - name: Build (warnings fail the build)
+        run: dotnet build LearnHub.sln --configuration Release --no-restore -p:TreatWarningsAsErrors=true
 
       - name: Test
         run: >

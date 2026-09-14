@@ -17,7 +17,7 @@ public sealed class AuthorizationTests(LearnHubWebApplicationFactory factory) : 
     [MemberData(nameof(StudentPages))]
     public async Task Guests_are_sent_to_login_for_member_pages(string url)
     {
-        var response = await factory.CreateBrowserClient().GetAsync(url);
+        var response = await factory.CreateBrowserClient().GetAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Account/Login?ReturnUrl=", response.LocationPath());
@@ -27,7 +27,7 @@ public sealed class AuthorizationTests(LearnHubWebApplicationFactory factory) : 
     [MemberData(nameof(AdminPages))]
     public async Task Guests_are_sent_to_login_for_admin_pages(string url)
     {
-        var response = await factory.CreateBrowserClient().GetAsync(url);
+        var response = await factory.CreateBrowserClient().GetAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Account/Login", response.LocationPath());
@@ -40,7 +40,7 @@ public sealed class AuthorizationTests(LearnHubWebApplicationFactory factory) : 
         var client = factory.CreateBrowserClient();
         await client.LoginAsDemoStudentAsync();
 
-        var response = await client.GetAsync(url);
+        var response = await client.GetAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Account/AccessDenied", response.LocationPath());
@@ -53,7 +53,7 @@ public sealed class AuthorizationTests(LearnHubWebApplicationFactory factory) : 
         var client = factory.CreateBrowserClient();
         await client.LoginAsAdminAsync();
 
-        var response = await client.GetAsync(url);
+        var response = await client.GetAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -65,13 +65,13 @@ public sealed class AuthorizationTests(LearnHubWebApplicationFactory factory) : 
         var client = factory.CreateBrowserClient();
         await client.LoginAsDemoStudentAsync();
 
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(url)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(url, cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
     }
 
     [Fact]
     public async Task Access_denied_page_returns_403()
     {
-        var response = await factory.CreateBrowserClient().GetAsync("/Account/AccessDenied");
+        var response = await factory.CreateBrowserClient().GetAsync("/Account/AccessDenied", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

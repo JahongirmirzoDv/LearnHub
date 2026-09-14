@@ -71,10 +71,10 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     [InlineData("/this-page-does-not-exist")]
     public async Task Unknown_pages_and_invalid_ids_return_a_friendly_404(string url)
     {
-        var response = await factory.CreateBrowserClient().GetAsync(url);
+        var response = await factory.CreateBrowserClient().GetAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Contains("on the map", await response.Content.ReadAsStringAsync());
+        Assert.Contains("on the map", await response.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     {
         var draftId = await CourseIdAsync("Git and GitHub for Team Projects");
 
-        var response = await factory.CreateBrowserClient().GetAsync($"/Courses/Details/{draftId}");
+        var response = await factory.CreateBrowserClient().GetAsync($"/Courses/Details/{draftId}", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -98,9 +98,9 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
         });
         var client = factory.CreateBrowserClient();
 
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/Resources/Details/{previewId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/Resources/Details/{previewId}", cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
 
-        var locked = await client.GetAsync($"/Resources/Details/{lockedId}");
+        var locked = await client.GetAsync($"/Resources/Details/{lockedId}", cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, locked.StatusCode);
         Assert.StartsWith("/Account/Login", locked.LocationPath());
     }
@@ -111,7 +111,7 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
         var pdfId = await factory.WithDbAsync(db =>
             db.LearningResources.Where(r => r.FileContentType == "application/pdf" && !r.IsPreview).Select(r => r.Id).FirstAsync());
 
-        var response = await factory.CreateBrowserClient().GetAsync($"/Resources/Open/{pdfId}");
+        var response = await factory.CreateBrowserClient().GetAsync($"/Resources/Open/{pdfId}", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Account/Login", response.LocationPath());
@@ -120,7 +120,7 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     [Fact]
     public async Task Html_responses_carry_security_headers()
     {
-        var response = await factory.CreateBrowserClient().GetAsync("/");
+        var response = await factory.CreateBrowserClient().GetAsync("/", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("script-src 'self'", response.Headers.GetValues("Content-Security-Policy").Single());
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
@@ -131,10 +131,10 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     [Fact]
     public async Task Health_endpoint_reports_the_database_as_healthy()
     {
-        var response = await factory.CreateBrowserClient().GetAsync("/health");
+        var response = await factory.CreateBrowserClient().GetAsync("/health", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
+        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -142,11 +142,11 @@ public sealed class PublicSiteTests(LearnHubWebApplicationFactory factory) : ICl
     {
         var client = factory.CreateBrowserClient();
 
-        var css = await client.GetAsync("/css/site.css");
+        var css = await client.GetAsync("/css/site.css", cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, css.StatusCode);
         Assert.Equal("text/css", css.Content.Headers.ContentType?.MediaType);
 
-        var cover = await client.GetAsync("/images/courses/networking-fundamentals.svg");
+        var cover = await client.GetAsync("/images/courses/networking-fundamentals.svg", cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, cover.StatusCode);
     }
 

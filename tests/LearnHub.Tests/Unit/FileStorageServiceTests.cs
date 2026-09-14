@@ -68,7 +68,7 @@ public sealed class FileStorageServiceTests : IDisposable
         PngHeader.CopyTo(oversized, 0);
 
         using var stream = new MemoryStream(oversized);
-        var result = await _storage.SaveAsync(stream, "big.png", length: 100, UploadKind.ResourceImage);
+        var result = await _storage.SaveAsync(stream, "big.png", length: 100, UploadKind.ResourceImage, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Contains("too large", result.Error);

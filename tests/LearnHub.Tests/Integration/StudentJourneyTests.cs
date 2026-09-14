@@ -17,7 +17,7 @@ public sealed partial class StudentJourneyTests(LearnHubWebApplicationFactory fa
         var course = await LoadCourseAsync();
 
         // Before enrolling, a non-preview lesson sends the student back to the course page.
-        var beforeEnrol = await client.GetAsync($"/Resources/Details/{course.LockedResourceId}");
+        var beforeEnrol = await client.GetAsync($"/Resources/Details/{course.LockedResourceId}", cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal($"/Courses/Details/{course.Id}", beforeEnrol.LocationPath());
 
         // Enrol.
@@ -51,7 +51,7 @@ public sealed partial class StudentJourneyTests(LearnHubWebApplicationFactory fa
         // Another student cannot open this result (IDOR protection).
         var otherStudent = factory.CreateBrowserClient();
         await otherStudent.RegisterStudentAsync("Curious Student");
-        Assert.Equal(HttpStatusCode.NotFound, (await otherStudent.GetAsync(resultUrl)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherStudent.GetAsync(resultUrl, cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
     }
 
     [Fact]
@@ -81,12 +81,12 @@ public sealed partial class StudentJourneyTests(LearnHubWebApplicationFactory fa
         await client.RegisterStudentAsync("Leaving Student");
         var course = await LoadCourseAsync();
         await client.SubmitFormAsync($"/Courses/Details/{course.Id}", $"/Courses/Enroll/{course.Id}", []);
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/Resources/Details/{course.LockedResourceId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/Resources/Details/{course.LockedResourceId}", cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
 
         var leave = await client.SubmitFormAsync($"/Courses/Details/{course.Id}", $"/Courses/Leave/{course.Id}", []);
 
         Assert.Equal(HttpStatusCode.Redirect, leave.StatusCode);
-        Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync($"/Resources/Details/{course.LockedResourceId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync($"/Resources/Details/{course.LockedResourceId}", cancellationToken: TestContext.Current.CancellationToken)).StatusCode);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed partial class StudentJourneyTests(LearnHubWebApplicationFactory fa
 
         var invalid = await client.SubmitFormAsync("/Profile", "/Profile", new Dictionary<string, string> { ["FullName"] = "" });
         Assert.Equal(HttpStatusCode.OK, invalid.StatusCode);
-        Assert.Contains("Please enter your full name.", await invalid.Content.ReadAsStringAsync());
+        Assert.Contains("Please enter your full name.", await invalid.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
 
         var valid = await client.SubmitFormAsync("/Profile", "/Profile", new Dictionary<string, string>
         {

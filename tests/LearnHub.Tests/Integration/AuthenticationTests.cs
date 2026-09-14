@@ -45,7 +45,7 @@ public sealed class AuthenticationTests(LearnHubWebApplicationFactory factory) :
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("The passwords do not match.", await response.Content.ReadAsStringAsync());
+        Assert.Contains("The passwords do not match.", await response.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
         Assert.False(await factory.WithDbAsync(db => db.Users.AnyAsync(u => u.Email == email)));
     }
 
@@ -61,7 +61,7 @@ public sealed class AuthenticationTests(LearnHubWebApplicationFactory factory) :
             ["AcceptTerms"] = "true"
         });
 
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("An account with this email address already exists.", html);
     }
@@ -84,7 +84,7 @@ public sealed class AuthenticationTests(LearnHubWebApplicationFactory factory) :
         var response = await factory.CreateBrowserClient().LoginAsync(LearnHubWebApplicationFactory.DemoStudentEmail, "Wrong-Password-1");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("The email address or password is incorrect.", await response.Content.ReadAsStringAsync());
+        Assert.Contains("The email address or password is incorrect.", await response.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class AuthenticationTests(LearnHubWebApplicationFactory factory) :
         var logout = await client.SubmitFormAsync("/Student/Dashboard", "/Account/Logout", []);
         Assert.Equal(HttpStatusCode.Redirect, logout.StatusCode);
 
-        var dashboard = await client.GetAsync("/Student/Dashboard");
+        var dashboard = await client.GetAsync("/Student/Dashboard", cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, dashboard.StatusCode);
         Assert.StartsWith("/Account/Login", dashboard.LocationPath());
     }
@@ -135,7 +135,7 @@ public sealed class AuthenticationTests(LearnHubWebApplicationFactory factory) :
         var response = await attacker.LoginAsync(email, LearnHubWebApplicationFactory.NewUserPassword);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("This account is locked.", await response.Content.ReadAsStringAsync());
+        Assert.Contains("This account is locked.", await response.Content.ReadAsStringAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public sealed class AuthenticationTests(LearnHubWebApplicationFactory factory) :
         {
             ["Email"] = LearnHubWebApplicationFactory.DemoStudentEmail,
             ["Password"] = LearnHubWebApplicationFactory.DemoStudentPassword
-        }));
+        }), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
