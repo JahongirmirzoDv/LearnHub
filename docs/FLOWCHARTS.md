@@ -4,13 +4,13 @@ Each flowchart follows the real code path. File paths are relative to `src/Learn
 
 ## 1. Request pipeline
 
-Every request passes through the middleware configured in `Program.cs`. On Azure App Service,
-`ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` adds the forwarded-headers step first, so the app knows the original
-request used HTTPS.
+Every request passes through the middleware configured in `Program.cs`. Railway terminates TLS at its edge proxy and
+forwards plain HTTP with `X-Forwarded-Proto` and `X-Forwarded-For`, so `UsePlatformProxyHeaders()` runs first and
+turns those headers into `Request.IsHttps` and the real client address.
 
 ```mermaid
 flowchart TD
-    request["HTTP request"] --> forwarded["Forwarded headers (production behind the App Service proxy)"]
+    request["HTTP request"] --> forwarded["Forwarded headers (UsePlatformProxyHeaders: the platform proxy's X-Forwarded-Proto and X-Forwarded-For)"]
     forwarded --> errors{"Production?"}
     errors -->|yes| handler["Exception handler to /Error and HSTS"]
     errors -->|no| devpage["Developer exception page"]
@@ -77,7 +77,7 @@ flowchart TD
     identityErrors --> fill
     ok -->|yes| role["Add the Student role"]
     role --> signin["Sign in"]
-    signin --> dashboard["Redirect to the local return URL or /Student/Dashboard"]
+    signin --> dashboard["Redirect to the local return URL, otherwise to the dashboard for the account's role: /Admin for an administrator, /Student/Dashboard for a student"]
 ```
 
 ## 4. Login
@@ -114,13 +114,14 @@ flowchart TD
     post --> role{"Signed in with the Student role?"}
     role -->|no| challenge["Login redirect or access denied"]
     role -->|yes| published{"Course exists and is published?"}
-    published -->|no| notFound["404 page"]
+    published -->|no| notFound["404 page (a missing course and a draft look the same)"]
     published -->|yes| already{"Already enrolled?"}
     already -->|yes| infoMessage["Message: You are already enrolled in this course"]
-    already -->|no| insert["Insert enrolment (UserId, CourseId, EnrolledAt)"]
+    already -->|no| insert["Insert enrolment (UserId, CourseId, EnrolledAt, LastAccessedAt)"]
     insert --> unique{"Unique index accepted the insert?"}
     unique -->|"no: simultaneous double submit"| infoMessage
-    unique -->|yes| success["Message: You're enrolled. Your route starts at the first lesson."]
+    unique -->|yes| progress["Recalculate this enrolment's stored progress"]
+    progress --> success["Message: You're enrolled. Your route starts at the first lesson."]
     infoMessage --> course["Redirect to the course page"]
     success --> course
 ```
@@ -167,7 +168,7 @@ flowchart TD
     next -->|no| same["Redirect back to the lesson"]
     remove --> same
     same --> progress
-    nextLesson --> progress["Progress shown on pages = (completed lessons + passed published quizzes with questions) / (lessons + published quizzes with questions)"]
+    nextLesson --> progress["Progress = (published lessons completed + passed published quizzes that have questions) / (published lessons + published quizzes that have questions); ProgressService stores the result on the enrolment"]
 ```
 
 ## 8. Taking and grading a quiz
@@ -180,7 +181,7 @@ flowchart TD
     available -->|no| notFound["404 page"]
     available -->|yes| enrolled{"Student enrolled?"}
     enrolled -->|no| coursePage["Redirect to the course page"]
-    enrolled -->|yes| form["Show questions and options without correct answers"]
+    enrolled -->|yes| form["Show questions and options without correct answers, plus a signed start token"]
     form --> answer["Student answers; counter shows answered questions"]
     answer --> unanswered{"Any unanswered questions?"}
     unanswered -->|yes| confirm{"Student confirms submitting anyway?"}
@@ -189,9 +190,10 @@ flowchart TD
     unanswered -->|no| submit
     submit --> recheck["Check quiz availability and enrolment again"]
     recheck --> load["Load questions and options from the database"]
-    load --> grade["For each question: the chosen option counts only if it belongs to that question; unanswered is incorrect"]
-    grade --> score["Score = floor(correct x 100 / questions); passed = score >= pass mark"]
-    score --> save["Save QuizAttempt snapshot and one QuizAnswer per question"]
+    load --> grade["For each question: the chosen option counts only if it belongs to that question; an unanswered or foreign option id scores nothing"]
+    grade --> score["Score = the points of the correct questions; percent = floor(score x 100 / total points); passed = percent >= pass mark"]
+    score --> progress["Recalculate the stored course progress: a passed quiz counts towards it"]
+    progress --> save["Save one QuizAttempt snapshot (start and completion times, correct count, question count, score, maximum score, percentage, passed) and one QuizAnswer per question"]
     save --> result["Redirect to /Quizzes/Result/{attemptId}"]
     result --> owner{"Attempt belongs to this student?"}
     owner -->|no| notFound
@@ -208,20 +210,22 @@ sequenceDiagram
     participant Db as ApplicationDbContext
 
     Student->>Browser: Choose answers and select Submit answers
-    Browser->>Controller: POST /Quizzes/Take/5 (answers, antiforgery token)
-    Controller->>Service: SubmitAsync(quizId, userId, answers)
+    Browser->>Controller: POST /Quizzes/Take/5 (answers, antiforgery token, start token)
+    Controller->>Service: SubmitAsync(quizId, userId, answers, startToken)
     Service->>Db: Find published quiz and check enrolment
     Db-->>Service: Quiz with pass mark, enrolment exists
-    Service->>Db: Load questions with options
+    Service->>Db: Load questions with their points and options
     Db-->>Service: Questions and correct flags
     Service->>Grader: Grade(questions, answers, passMark)
-    Grader-->>Service: Correct count, score, passed, answers
+    Grader-->>Service: Correct count, score, maximum score, passed, answers
+    Service->>Service: Read StartedAt from the signed start token (falling back to the completion time)
     Service->>Db: Insert QuizAttempt with QuizAnswers
     Db-->>Service: Attempt id
+    Service->>Db: Recalculate the stored course progress
     Service-->>Controller: Allowed, attempt id
     Controller-->>Browser: 302 to /Quizzes/Result/{attemptId}
     Browser->>Controller: GET /Quizzes/Result/{attemptId}
-    Controller->>Service: GetResultAsync(attemptId, userId)
+    Controller->>Service: GetResultAsync(attemptId, userId, isAdmin: false)
     Service->>Db: Attempt for this user with answers and explanations
     Db-->>Service: Result
     Controller-->>Browser: Result page
@@ -255,6 +259,8 @@ flowchart TD
     files --> transaction["Transaction: delete this course's QuizAnswers, then delete the course (lessons, quizzes, questions, attempts and enrolments cascade)"]
     transaction --> cleanup["Delete the files from storage"]
     cleanup --> list
+    choice -->|"Publish or move to drafts"| toggle["Toggle Published, then back to the course details"]
+    toggle --> details
 ```
 
 ## 10. Admin: saving a question

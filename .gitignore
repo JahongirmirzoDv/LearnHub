@@ -57,11 +57,12 @@ secrets.json
 *.key
 .env
 .env.*
+# …but the placeholder file belongs in Git: it documents every variable without holding a real value.
+!.env.example
 appsettings.*.local.json
 appsettings.Local.json
 *.PublishSettings
 *.publishsettings
-*.azurePubxml
 
 # Local databases and runtime data
 App_Data/
@@ -77,6 +78,9 @@ playwright-report/
 test-results/
 blob-report/
 tests/e2e/screenshots/
+
+# Firebase CLI: a local upload-hash cache, regenerated on every deploy
+.firebase/
 
 # OS files
 .DS_Store

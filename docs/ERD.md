@@ -2,8 +2,9 @@
 
 This diagram is generated from the EF Core model in `src/LearnHub/Models` and the Fluent API configuration in
 `src/LearnHub/Data/Configurations`. Table names are EF Core defaults, which match the `DbSet` names in
-`src/LearnHub/Data/ApplicationDbContext.cs`. The same model produces both migration sets
-(`Data/Migrations/Sqlite` and `Data/Migrations/SqlServer`).
+`src/LearnHub/Data/ApplicationDbContext.cs`. There is one provider (SQLite), one context and one migration:
+`Data/Migrations/20260914100832_InitialCreate.cs` creates all **18 tables** — the eleven application tables below plus
+the seven ASP.NET Core Identity tables.
 
 Notation: `PK` primary key, `FK` foreign key, `UK` unique. Column sizes are the maximum lengths from
 `src/LearnHub/Models/FieldLengths.cs`. Enum columns are stored as strings.
@@ -29,11 +30,11 @@ erDiagram
 
     AspNetUsers {
         string Id PK
-        string UserName UK "256"
-        string Email UK "256, required unique by Identity options"
+        string UserName "256, unique index on the normalized value"
+        string Email "256, unique through the Identity RequireUniqueEmail option"
         string PasswordHash "Identity PBKDF2 hash"
         string SecurityStamp
-        datetimeoffset LockoutEnd "nullable, max value = deactivated"
+        datetimeoffset LockoutEnd "nullable, the maximum value means deactivated"
         int AccessFailedCount
         string FullName "required, 100"
         string Bio "nullable, 500"
@@ -41,7 +42,7 @@ erDiagram
     }
     AspNetRoles {
         string Id PK
-        string Name UK "Admin or Student"
+        string Name "Admin or Student; unique index on the normalized value"
     }
     AspNetUserRoles {
         string UserId PK, FK
@@ -63,7 +64,7 @@ erDiagram
         string Description "required, 4000"
         string LearningOutcomes "nullable, 1000"
         string InstructorName "required, 100"
-        string Difficulty "Beginner, Intermediate or Advanced"
+        string Difficulty "required, 20; Beginner, Intermediate or Advanced"
         int DurationMinutes "check greater than 0"
         string ThumbnailPath "nullable, 260"
         bool IsPublished
@@ -75,8 +76,9 @@ erDiagram
         int CourseId FK
         string Title "required, 150"
         string Summary "nullable, 300"
-        string Type "Article, Video, Pdf, Image or Link"
+        string Type "required, 20; Article, Video, Pdf, Image, Link or Exercise"
         string Body "nullable, 20000"
+        string Solution "nullable, 20000, worked answer for an exercise"
         string ExternalUrl "nullable, 500"
         string FilePath "nullable, 260"
         string FileName "nullable, 255"
@@ -85,6 +87,7 @@ erDiagram
         int EstimatedMinutes "nullable"
         int SortOrder "check 0 or more"
         bool IsPreview
+        bool IsPublished
         datetime CreatedAt "UTC"
         datetime UpdatedAt "UTC"
     }
@@ -94,6 +97,8 @@ erDiagram
         int CourseId FK
         datetime EnrolledAt "UTC"
         datetime LastAccessedAt "nullable, UTC"
+        int CompletionPercentage "check 0 to 100, recalculated by ProgressService"
+        datetime CompletedAt "nullable, set when the course is finished"
     }
     ResourceCompletions {
         int Id PK
@@ -116,6 +121,7 @@ erDiagram
         int QuizId FK
         string Text "required, 500"
         string Explanation "nullable, 500"
+        int Points "check 1 to 100"
         int SortOrder
     }
     AnswerOptions {
@@ -129,10 +135,13 @@ erDiagram
         int Id PK
         int QuizId FK
         string UserId FK
-        datetime SubmittedAt "UTC, indexed"
+        datetime StartedAt "UTC, taken from the signed start token issued with the quiz page"
+        datetime CompletedAt "UTC, indexed"
         int CorrectCount "check 0 to QuestionCount"
         int QuestionCount
-        int ScorePercent "check 0 to 100"
+        int Score "points earned, check 0 to MaxScore"
+        int MaxScore "points available when the attempt was made"
+        int ScorePercent "check 0 to 100, rounded down"
         bool Passed
     }
     QuizAnswers {
@@ -155,7 +164,10 @@ erDiagram
 
 `ContactMessages` has no relationships: messages are stored as sent from the public contact form. ASP.NET Core
 Identity also creates `AspNetUserClaims`, `AspNetUserLogins`, `AspNetUserTokens` and `AspNetRoleClaims`; they
-exist in the schema but LearnHub does not use them, so they are left out of the diagram.
+exist in the schema but LearnHub does not use them, so they are left out of the diagram. The same applies to
+Identity's own plumbing columns, which the migration does create: `NormalizedUserName`, `NormalizedEmail`,
+`EmailConfirmed`, `ConcurrencyStamp`, `PhoneNumber`, `PhoneNumberConfirmed`, `TwoFactorEnabled` and
+`LockoutEnabled` on `AspNetUsers`, and `NormalizedName` and `ConcurrencyStamp` on `AspNetRoles`.
 
 ## Relationships and delete behaviour
 
@@ -169,7 +181,7 @@ exist in the schema but LearnHub does not use them, so they are left out of the 
 | LearningResources → ResourceCompletions | 1 : many | Cascade | Completion records belong to the lesson. |
 | Quizzes → Questions → AnswerOptions | 1 : many | Cascade | Questions and options cannot exist without their quiz. |
 | Quizzes → QuizAttempts → QuizAnswers | 1 : many | Cascade | Attempts belong to the quiz. |
-| Questions → QuizAnswers | 1 : many | **Restrict** | A second cascade path (Quiz → Question → QuizAnswer beside Quiz → QuizAttempt → QuizAnswer) is rejected by SQL Server. |
+| Questions → QuizAnswers | 1 : many | **Restrict** | A second cascade path (Quiz → Question → QuizAnswer beside Quiz → QuizAttempt → QuizAnswer) would let a quiz edit delete a student's answer history silently, so the link restricts instead. |
 | AnswerOptions → QuizAnswers | 0..1 : many | **Restrict** | Same reason; an answer may also be empty (unanswered question). |
 
 Because of the two Restrict rules, `CourseManagementService`, `QuizManagementService` and
@@ -180,16 +192,17 @@ inside one transaction created through the provider's execution strategy (`Data/
 
 | Table | Unique | Other indexes | Check constraints |
 |-------|--------|---------------|-------------------|
-| AspNetUsers | NormalizedUserName, email uniqueness enforced by Identity (`RequireUniqueEmail`) | NormalizedEmail | – |
+| AspNetUsers | NormalizedUserName (`UserNameIndex`); email uniqueness enforced by Identity (`RequireUniqueEmail`) | NormalizedEmail (`EmailIndex`) | – |
+| AspNetRoles | NormalizedName (`RoleNameIndex`) | – | – |
 | Categories | Name | – | – |
 | Courses | – | CategoryId; Title; (IsPublished, CategoryId) | `CK_Courses_DurationMinutes`: DurationMinutes > 0 |
-| LearningResources | – | (CourseId, SortOrder) | `CK_LearningResources_SortOrder`: SortOrder >= 0 |
-| Enrollments | (UserId, CourseId) | CourseId | – |
+| LearningResources | – | (CourseId, SortOrder); (CourseId, IsPublished) | `CK_LearningResources_SortOrder`: SortOrder >= 0 |
+| Enrollments | (UserId, CourseId) | (CourseId, CompletionPercentage) | `CK_Enrollments_CompletionPercentage`: 0–100 |
 | ResourceCompletions | (UserId, LearningResourceId) | LearningResourceId | – |
 | Quizzes | – | CourseId | `CK_Quizzes_PassMarkPercent`: 0–100 |
-| Questions | – | (QuizId, SortOrder) | – |
+| Questions | – | (QuizId, SortOrder) | `CK_Questions_Points`: 1–100 |
 | AnswerOptions | – | (QuestionId, SortOrder) | – |
-| QuizAttempts | – | (UserId, QuizId); SubmittedAt; QuizId | `CK_QuizAttempts_ScorePercent`: 0–100; `CK_QuizAttempts_CorrectCount`: 0 ≤ CorrectCount ≤ QuestionCount |
+| QuizAttempts | – | (UserId, QuizId); CompletedAt; QuizId | `CK_QuizAttempts_ScorePercent`: 0–100; `CK_QuizAttempts_CorrectCount`: 0 ≤ CorrectCount ≤ QuestionCount; `CK_QuizAttempts_Score`: 0 ≤ Score ≤ MaxScore |
 | QuizAnswers | (QuizAttemptId, QuestionId) | QuestionId; SelectedOptionId | – |
 | ContactMessages | – | (IsRead, CreatedAt) | – |
 
@@ -200,13 +213,17 @@ turns the `DbUpdateException` into the message "You are already enrolled in this
 ## Design notes
 
 - **Timestamps.** Entities implementing `IHasTimestamps` get `CreatedAt` and `UpdatedAt` set in
-  `ApplicationDbContext.SaveChanges`. A value converter stores every `DateTime` as UTC, so SQLite and SQL Server
-  return the same values; the browser converts them to local time.
-- **Derived progress.** Course progress is not stored. It is calculated as
-  (completed lessons + passed published quizzes that have questions) ÷ (lessons + published quizzes that have
-  questions), so adding a lesson correctly lowers everyone's percentage.
-- **Score snapshots.** `QuizAttempts` stores `CorrectCount`, `QuestionCount`, `ScorePercent` and `Passed`, and each
-  `QuizAnswers` row stores `IsCorrect`, so results stay truthful even if the quiz is edited later.
+  `ApplicationDbContext.SaveChanges`. A `UtcDateTimeConverter` value converter stores every `DateTime` as UTC, so
+  the stored values do not depend on the machine's time zone; the browser converts them for display.
+- **Progress is stored, then kept honest.** `ProgressService` recalculates `Enrollments.CompletionPercentage` and
+  `Enrollments.CompletedAt` as (published lessons completed + passed published quizzes that have questions) ÷
+  (published lessons + published quizzes that have questions). Caching it keeps the dashboard, the student pages and
+  the admin lists to one query, and the recalculation runs whenever a lesson is completed, a quiz is passed, an
+  enrolment changes or course content is added or removed — so adding a lesson correctly lowers everyone's
+  percentage.
+- **Score snapshots.** `QuizAttempts` stores `Score`, `MaxScore`, `CorrectCount`, `QuestionCount`, `ScorePercent`
+  and `Passed`, and each `QuizAnswers` row stores `IsCorrect`, so results stay truthful even if the quiz, its points
+  or its options are edited later. `Questions.Points` weights the questions, and the percentage is rounded down.
 - **Deactivation without a flag.** A deactivated user has `LockoutEnd` set to the maximum date. Identity already
   refuses sign-in for locked-out users, so no extra `IsActive` column can drift out of sync.
 - **Leaving a course.** Removing an enrolment keeps completion records and quiz attempts, so progress returns if

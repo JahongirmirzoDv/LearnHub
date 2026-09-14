@@ -6,7 +6,7 @@
 | Module | CT050-3-2-WAPP Web Applications (group assignment) |
 | Institution | Asia Pacific University of Technology & Innovation (APU) |
 | Team | Member 1 (TP000000), Member 2 (TP000000), Member 3 (TP000000), Member 4 (TP000000) |
-| Technology | ASP.NET Core MVC on .NET 10, C#, Entity Framework Core, SQL Server / SQLite, ASP.NET Core Identity |
+| Technology | ASP.NET Core MVC on .NET 10, C#, Razor, Bootstrap 5.3, Entity Framework Core 10 with SQLite, ASP.NET Core Identity |
 
 ## 1. Background and problem
 
@@ -48,7 +48,7 @@ line, a course is a route, lessons are stops, and progress is how far along the 
 | O4 | Provide administrators with full create, read, update and delete management of all learning content, enrolments and users. | Every admin entity has working list, create, edit and delete pages, tested through the real forms. |
 | O5 | Protect the application against the common web risks in the OWASP Top 10. | Security review completed; automated tests for access control, CSRF, XSS, uploads and lockout pass. |
 | O6 | Make every page usable on phones, tablets and desktops and accessible to keyboard and screen-reader users. | Browser tests pass at three screen sizes with no WCAG 2.2 A/AA violations reported by axe-core. |
-| O7 | Deploy the application to Azure App Service with Azure SQL Database and publish a presentation site on GitHub Pages, with automated tests before every deployment. | CI and deployment workflows run on GitHub Actions; the presentation site links to the live application. |
+| O7 | Ship the application as a Docker image to Railway, publish the static presentation site on Firebase Hosting, and run automated tests before every delivery. | The three CI jobs (`build-and-test`, `container`, `e2e`) pass; the presentation site is live and links to the application; the Railway deployment files and commands are complete and ready to run. |
 
 ## 5. Target audience
 
@@ -91,7 +91,7 @@ line, a course is a route, lessons are stops, and progress is how far along the 
 | Guest | Home, About, Contact form, Privacy; course catalogue with search, filters, sorting and pagination; course details; free preview lessons; registration and login |
 | Student | Dashboard; profile and password change; enrol and leave courses; My Courses; lessons (article, video, PDF, image, link); mark complete; progress; quizzes with instant marking and explanations; result history; logout |
 | Administrator | Dashboard with statistics; courses (with cover images and publishing); categories; learning resources (with uploads); quizzes, questions and answer options; enrolments; quiz results; users (roles, deactivation, deletion); contact messages |
-| Platform | ASP.NET Core Identity with roles; SQLite for development and Azure SQL Database in production; migrations and demo data; security controls; responsive and accessible design; automated tests; CI/CD; GitHub Pages presentation site |
+| Platform | ASP.NET Core Identity with Admin and Student roles; a single SQLite database with EF Core code-first migrations and demo data; security controls; responsive and accessible design; automated tests; CI; the application packaged as a Docker image for Railway; a Firebase Hosting presentation site |
 
 ### Out of scope for version 1.0
 
@@ -100,7 +100,7 @@ email), an instructor self-service role, discussion forums, native mobile apps a
 
 ## 7. Requirements summary
 
-The complete, numbered list is in [Requirements-Checklist.md](Requirements-Checklist.md).
+The complete, numbered list is in [REQUIREMENTS_CHECKLIST.md](REQUIREMENTS_CHECKLIST.md).
 
 | Group | IDs | Examples |
 |-------|-----|----------|
@@ -111,11 +111,12 @@ The complete, numbered list is in [Requirements-Checklist.md](Requirements-Check
 | Database | DB-01–10 | Keys, constraints, indexes, delete rules, migrations, seed data, ERD |
 | Security and validation | AUTH, VAL, SEC | Password hashing, roles, CSRF, XSS, IDOR, overposting, upload safety |
 | Quality | ERR, UI, TEST | Error pages, logging, responsive and accessible UI, automated and manual tests |
-| Delivery | GIT, CI, DEP, PAGES, DOC | Repository, workflows, Azure deployment, Pages site, documentation |
+| Delivery | GIT, CI, DEP, HOST, DOC | Repository, workflows, Railway container deployment, Firebase Hosting site, documentation |
 
-Non-functional requirements: pages respond within about one second on the free hosting tier after start-up; the
-interface meets WCAG 2.2 AA contrast and keyboard access; no secret is stored in the repository; the application can
-be rebuilt from an empty database with migrations and seed data.
+Non-functional requirements: pages respond within about one second once the container is warm; the interface meets
+WCAG 2.2 A/AA contrast and keyboard access; no secret is stored in the repository — the administrator password is
+supplied through `Seed__AdminPassword` in the environment and every other credential is generated per CI run; the
+application can be rebuilt from an empty database with migrations and seed data.
 
 ## 8. Proposed technology
 
@@ -123,30 +124,33 @@ be rebuilt from an empty database with migrations and seed data.
 |--------|--------|
 | ASP.NET Core MVC on .NET 10 (LTS) | Required .NET technology; long-term support until 2028; built-in model binding, validation, antiforgery and Razor views |
 | C# | Strong typing and the language of the module |
-| Entity Framework Core 10 | LINQ queries are parameterised by default; migrations keep the schema in version control; one model works with SQLite and SQL Server |
-| SQLite (development) | No database server needed on student laptops; the database is a single file |
-| Azure SQL Database (production) | Managed SQL Server with backups; free offer available; Microsoft Entra authentication without passwords |
-| ASP.NET Core Identity | Proven password hashing, lockout, roles and cookie authentication instead of custom security code |
+| Razor views with HTML5 semantic markup | Server-rendered pages that work without JavaScript and stay accessible to assistive technology |
+| Entity Framework Core 10 with SQLite | LINQ queries are parameterised by default, code-first migrations keep the schema in version control, and the whole database is one file that needs no server |
+| SQLite on a Railway volume | One provider in development, testing and production, so no behaviour can differ between environments; the database file and the Data Protection key ring live on a mounted volume at `/data`, so a redeploy keeps every account and upload; nothing external has to be provisioned, explained or demonstrated |
+| ASP.NET Core Identity | Proven password hashing, lockout, Admin and Student roles and cookie authentication instead of custom security code |
 | Bootstrap 5.3 with a custom design system | Accessible, responsive components, restyled so the site has its own identity |
 | Vanilla JavaScript and jQuery Validation Unobtrusive | Progressive enhancement; client validation generated from the same server rules |
 | xUnit and Playwright | Fast automated tests of the real application, plus browser tests on several screen sizes |
-| GitHub, GitHub Actions, Azure App Service, GitHub Pages | Version control, automated testing and deployment, and free hosting for the application and the presentation site |
+| GitHub and GitHub Actions | Version control, pull requests and the three CI jobs that build, run the container and exercise the site in a browser |
+| Railway (Docker image) | Runs the application itself plus its `/data` volume and its TLS edge proxy; a Dockerfile and `railway.json` describe the whole deployment |
+| Firebase Hosting | Serves the static presentation site from `FirebaseLanding/` over HTTPS with its own caching rules, for free |
 
 ## 9. High-level architecture
 
 ```mermaid
 flowchart TD
-    users["Guests, students and administrators"] -->|HTTPS| app["ASP.NET Core MVC application on Azure App Service"]
+    users["Guests, students and administrators"] -->|HTTPS| proxy["Railway edge proxy (TLS)"]
+    proxy -->|"HTTP + X-Forwarded-Proto"| app["ASP.NET Core MVC application in a Docker container on Railway"]
     subgraph appLayers["Application"]
         controllers["Controllers and Admin area"] --> services["Services with business rules"]
         services --> ef["Entity Framework Core"]
     end
     app --- appLayers
-    ef --> db[("Azure SQL Database")]
-    services --> files["Private file storage"]
-    github["GitHub repository"] -->|"GitHub Actions: test and deploy"| app
-    github -->|"GitHub Pages"| site["Presentation site"]
-    site -->|"Launch LearnHub"| app
+    ef --> db[("SQLite file on the Railway volume at /data")]
+    services --> files["Private file storage on the volume"]
+    github["GitHub repository with GitHub Actions"] -->|"Docker image"| app
+    github -->|"firebase deploy --only hosting"| site["Firebase Hosting presentation site"]
+    site -->|"Open Learning System"| proxy
 ```
 
 ## 10. Risks and mitigations
@@ -154,12 +158,13 @@ flowchart TD
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | Team members have little disk space for the .NET SDK | High | Medium | Build, test and generate migrations in GitHub Actions; only the repository is needed locally |
-| Passwords or connection strings leak into Git | Medium | High | User secrets locally; App Service settings and managed identities in production; `.gitignore`; review before merge |
-| SQLite and SQL Server behave differently | Medium | High | Provider-specific migrations; run the whole test suite on both databases in CI |
+| Passwords or connection strings leak into Git | Medium | High | User secrets locally; environment variables on Railway; `.env` is git-ignored and only `.env.example` with placeholders is committed; CI generates throw-away passwords and masks them |
+| The SQLite file is lost on redeploy because the volume is missing | Medium | High | The database, the Data Protection key ring and uploads all live under `/data`; CI mounts a volume in the same place and restarts the container to prove migrations are not re-applied |
+| A single SQLite instance cannot serve many concurrent writers | Low | Medium | The deployment is deliberately single-instance and read-heavy, which suits one file; the service layer is provider-agnostic should a server database ever be needed |
 | Scope creep (payments, chat, certificates) | Medium | Medium | Fixed out-of-scope list; new ideas recorded as future enhancements |
 | Security weaknesses in custom code | Medium | High | Use framework features (Identity, antiforgery, Razor encoding); security review; attack-style tests |
 | Uneven contribution or merge conflicts | Medium | Medium | Clear ownership per area, short-lived branches, pull requests with CI checks |
-| Cloud free-tier limits or cold starts during the demonstration | Medium | Low | Warm the site before presenting; screenshots and a local run as backup; option to scale to B1 temporarily |
+| Cloud free-tier limits or cold starts during the demonstration | Medium | Low | The health check runs before the service accepts traffic; warm the site before presenting; screenshots and a local container run as backup |
 
 ## 11. Schedule
 
@@ -187,8 +192,9 @@ gantt
 ## 12. Deliverables
 
 1. Source code in the GitHub repository with a README.
-2. The running application on Azure App Service and the presentation site on GitHub Pages.
-3. Automated tests and CI/CD workflows.
+2. The application packaged as a Docker image for Railway (`Dockerfile`, `railway.json`, `.env.example`) and the
+   presentation site live on Firebase Hosting at <https://learnhub-wapp.web.app>.
+3. Automated tests and the three CI jobs in `.github/workflows/ci.yml`.
 4. Documentation: this proposal, the final report content, ERD, use cases, flowcharts, wireframes, navigation
    structure, testing and security documents, deployment guide, team responsibilities, Git workflow and viva
    preparation.

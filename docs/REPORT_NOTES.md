@@ -1,7 +1,8 @@
 # LearnHub – Final Report Content
 
 Content for the CT050-3-2-WAPP group report. Paste each section into the university template; diagrams are Mermaid
-(render them on GitHub or export them as images) and screenshots are in `docs/assets/screens/`.
+(render them on GitHub or export them as images) and the screenshots used below are the ones the presentation site
+serves from `FirebaseLanding/assets/screens/`.
 
 ---
 
@@ -18,20 +19,22 @@ Content for the CT050-3-2-WAPP group report. Paste each section into the univers
 | Intake | *Intake code* |
 | Submission date | *Date* |
 | Repository | https://github.com/JahongirmirzoDv/LearnHub |
-| Presentation site | https://jahongirmirzodv.github.io/LearnHub/ |
+| Presentation site | https://learnhub-wapp.web.app (Firebase Hosting, live) |
 
 ## Abstract
 
 LearnHub is a web-based learning management system for computing students, built with ASP.NET Core MVC on .NET 10,
-Entity Framework Core and ASP.NET Core Identity. Guests explore a catalogue of courses and free preview lessons;
-registered students enrol, study articles, videos, PDF documents and images, mark lessons complete, take quizzes with
-explained answers and follow their progress on a data-driven dashboard. Administrators manage courses, categories,
-learning resources, quizzes, enrolments, users and contact messages in a protected admin area. The system uses SQLite
-during development and Azure SQL Database in production, with migrations for both. Security follows the OWASP Top
+C# and Razor views, Bootstrap 5.3, Entity Framework Core 10 and ASP.NET Core Identity. Guests explore a catalogue of
+courses and free preview lessons; registered students enrol, study articles, videos, PDF documents and images, mark
+lessons complete, take quizzes with explained answers and follow their progress on a data-driven dashboard.
+Administrators manage courses, categories, learning resources, quizzes, enrolments, users and contact messages in a
+protected admin area. One SQLite database with a single code-first migration set serves every environment, and on the
+hosting platform its file lives on a mounted volume so it survives each redeploy. Security follows the OWASP Top
 10:2025: role-based authorisation, antiforgery tokens, encoded output with a strict Content Security Policy, ownership
-checks, validated uploads, rate limiting and passwordless cloud access. Quality is assured by 182 automated .NET tests
-run on both database engines and 42 browser and accessibility checks on three screen sizes, all executed by GitHub
-Actions before deployment to Azure App Service.
+checks, validated uploads, rate limiting and no committed credentials. Quality is assured by 211 automated .NET tests,
+42 browser and accessibility checks on three screen sizes, and continuous integration that also builds the Docker image
+and runs it the way the host will. The static presentation site is live on Firebase Hosting and links to the
+application, because Firebase cannot execute ASP.NET Core.
 
 ## 1. Introduction
 
@@ -79,7 +82,7 @@ walks through screenshots, and sections 8 to 10 evaluate the work, propose enhan
 | O4 | Full admin CRUD for content, enrolments and users | Yes | `AdminManagementTests`; admin browser tests |
 | O5 | Protection against OWASP Top 10 risks | Yes | Security review; attack-style automated tests |
 | O6 | Responsive and accessible on phone, tablet and desktop | Yes | 42 browser checks at three sizes; no WCAG 2.2 A/AA violations from axe-core |
-| O7 | Automated testing and cloud deployment with a presentation site | Yes (deployment pending the team's Azure sign-in) | CI and deploy workflows; GitHub Pages live |
+| O7 | Automated testing and container deployment with a presentation site | Partly – Firebase Hosting is live; the Railway service is configured but not yet deployed | Three CI jobs; https://learnhub-wapp.web.app |
 
 ### 2.3 Audience modelling
 
@@ -93,7 +96,8 @@ walks through screenshots, and sections 8 to 10 evaluate the work, propose enhan
 
 In scope: public catalogue and pages, registration and login, student dashboard, enrolment, lessons of five types,
 completion tracking, quizzes and results, profile management, a complete admin area, security controls, responsive
-and accessible design, automated tests, CI/CD, Azure deployment and a GitHub Pages presentation site.
+and accessible design, automated tests, CI/CD, a Docker image that runs on Railway and a Firebase Hosting presentation
+site.
 
 Out of scope for version 1.0: payments, certificates, chat, forums, live classes, an AI tutor, an instructor
 self-service role, email delivery (confirmation and password reset), native apps and multiple languages.
@@ -126,7 +130,7 @@ gantt
 Member 1 led architecture, authentication, the security review and deployment. Member 2 built the catalogue,
 enrolment and student dashboard. Member 3 built lessons, uploads, quizzes, grading and progress. Member 4 built the
 admin area, the automated tests, the documentation and the presentation site. Details are in
-[Team-Responsibilities.md](Team-Responsibilities.md); the full proposal is in [Proposal.md](Proposal.md).
+[TEAM.md](TEAM.md); the full proposal is in [PROPOSAL.md](PROPOSAL.md).
 
 ## 3. System design
 
@@ -138,12 +142,11 @@ bind to view models, never to entities.
 
 ```mermaid
 flowchart TD
-    browser["Browser: Razor-rendered HTML, CSS design system, JavaScript enhancements"] -->|HTTPS| middleware["Middleware: exception handling, security headers, HTTPS, static files, rate limiting, authentication, authorisation"]
+    browser["Browser: Razor-rendered HTML, CSS design system, JavaScript enhancements"] -->|HTTPS| middleware["Middleware: proxy headers, exception handling, security headers, HTTPS, static files, rate limiting, authentication, authorisation"]
     middleware --> controllers["Controllers: public, student and Admin area"]
     controllers --> services["Services: catalogue, enrolment, lessons, quizzes, progress, management, dashboards, file storage"]
     services --> context["ApplicationDbContext (EF Core 10)"]
-    context --> sqlite[("SQLite: development and tests")]
-    context --> azure[("Azure SQL Database: production")]
+    context --> sqlite[("SQLite: one file, one provider, one migration set")]
     services --> files["Private file storage"]
 ```
 
@@ -151,13 +154,14 @@ Deployment view:
 
 ```mermaid
 flowchart LR
-    repo["GitHub repository"] --> ci["GitHub Actions CI: SQLite tests, SQL Server tests, browser tests"]
-    repo --> deploy["Deploy workflow"] -->|"OpenID Connect"| appService["Azure App Service (Linux, .NET 10)"]
-    appService -->|"managed identity"| sql[("Azure SQL Database")]
-    repo --> pages["GitHub Pages presentation site"] -->|"Launch LearnHub"| appService
+    repo["GitHub repository"] --> ci["GitHub Actions: build, .NET tests, container test, browser tests"]
+    repo --> docker["Dockerfile: .NET 10 SDK build stage, ASP.NET Core 10 runtime stage"]
+    docker --> railway["Railway service: container listening on PORT, TLS terminated at the edge proxy"]
+    railway --> volume[("Railway volume /data: SQLite file, Data Protection key ring, uploads")]
+    repo --> firebase["Firebase Hosting presentation site (live)"] -->|"Open Learning System"| railway
 ```
 
-The detailed design, including every route, is in [Architecture.md](Architecture.md).
+The detailed design, including every route, is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### 3.2 Use cases
 
@@ -178,7 +182,7 @@ flowchart LR
 ```
 
 Every use case has preconditions, main and alternative flows and its implementing controller in
-[Use-Cases.md](Use-Cases.md).
+[USE_CASES.md](USE_CASES.md).
 
 ### 3.3 Flowcharts
 
@@ -211,7 +215,7 @@ flowchart TD
 ```
 
 Eleven flowcharts, including the request pipeline, login, lesson access, course deletion and upload validation, are in
-[Flowcharts.md](Flowcharts.md).
+[FLOWCHARTS.md](FLOWCHARTS.md).
 
 ### 3.4 Wireframes
 
@@ -219,7 +223,7 @@ Low-fidelity wireframes were produced for the home page, catalogue, course detai
 student dashboard, authentication forms, admin dashboard, admin list pages and admin forms, each in desktop and phone
 variants. They fixed the key layout decisions early: a two-column hero with the category map, a sidebar of coloured
 category filters in the catalogue, a sticky enrolment panel beside the course route, a sticky lesson outline, and an
-admin shell with a dark sidebar that becomes an off-canvas menu on small screens. See [Wireframes.md](Wireframes.md).
+admin shell with a dark sidebar that becomes an off-canvas menu on small screens. See [WIREFRAMES.md](WIREFRAMES.md).
 
 ### 3.5 Navigation structure
 
@@ -234,11 +238,14 @@ flowchart TD
 
 Guests see Home, Courses, About, Contact, Log in and Register; students also see My Courses, Dashboard and a user menu;
 administrators see an Admin link and use the admin sidebar. Breadcrumbs appear on nested pages. The complete site map,
-route table and redirect behaviour are in [Navigation.md](Navigation.md).
+route table and redirect behaviour are in [NAVIGATION.md](NAVIGATION.md).
 
 ### 3.6 Database design
 
-The database has eleven application tables plus the ASP.NET Core Identity tables.
+The database has eleven application tables — `Categories`, `Courses`, `LearningResources`, `Enrollments`,
+`ResourceCompletions`, `Quizzes`, `Questions`, `AnswerOptions`, `QuizAttempts`, `QuizAnswers` and `ContactMessages` —
+plus the seven ASP.NET Core Identity tables. One code-first migration creates all eighteen tables, and SQLite is the
+only provider, so there is one context and one migration set to keep in step rather than one schema per dialect.
 
 ```mermaid
 erDiagram
@@ -261,17 +268,23 @@ erDiagram
 Key design decisions:
 
 - **Integrity:** primary and foreign keys, required columns with lengths from one `FieldLengths` class, unique indexes
-  (category name; one enrolment per student and course; one completion per student and lesson; one answer per question
-  per attempt) and check constraints (positive duration, pass mark and score between 0 and 100, correct count not above
-  question count).
-- **Delete behaviour:** deleting a category is restricted while courses exist; a course cascades to its lessons,
-  quizzes and enrolments; quiz answers restrict deletion of questions and options, because SQL Server forbids multiple
-  cascade paths, so services remove answers first inside a transaction.
-- **Truthful history:** attempts store a score snapshot; progress is calculated rather than stored; deactivation uses
-  Identity lockout instead of a separate flag.
+  (category name; one enrolment per student and course; one completion per student and resource; one answer per question
+  per attempt) and check constraints (positive course duration, completion percentage, pass mark and score inside their
+  ranges, question points between one and one hundred, correct count never above the question count).
+- **Delete behaviour:** deleting a category is restricted while courses exist; a course cascades to its resources,
+  quizzes, attempts and enrolments; and quiz answers restrict deletion of the questions and options they refer to, so
+  editing a quiz can never silently erase a student's answer history — the services delete the dependent answers first,
+  inside one transaction.
+- **Truthful history:** an attempt stores a snapshot of `CorrectCount`, `QuestionCount`, `Score`, `MaxScore`,
+  `ScorePercent` and `Passed`; progress is calculated rather than stored; deactivation uses Identity lockout instead of a
+  separate flag.
+- **Location:** the connection string is read from `DATABASE_CONNECTION_STRING`, falling back to
+  `ConnectionStrings:DefaultConnection`; a relative path is resolved against the content root and its folder is created
+  automatically, and on the hosting platform the path points at the persistent volume (`Data Source=/data/learnhub.db`).
 - **Time:** all dates are stored in UTC with automatic `CreatedAt` and `UpdatedAt`.
 
-The full diagram with every column, index and constraint is in [ERD.md](ERD.md).
+The full diagram with every column, index and constraint is in [ERD.md](ERD.md), and the reasoning behind each
+decision is in [DATABASE.md](DATABASE.md).
 
 ## 4. Implementation
 
@@ -371,8 +384,10 @@ the server goes further than the browser can: it checks the file signature and t
 
 ### 4.5 Database and Entity Framework Core
 
-The abstract `ApplicationDbContext` holds the model; `SqliteDbContext` and `SqlServerDbContext` inherit it and each owns
-a migrations folder. Relationships and constraints use the Fluent API:
+`ApplicationDbContext` holds the whole model, and one provider is registered for every environment: SQLite, in
+`Data/DatabaseServiceCollectionExtensions.cs`. There is a single migrations folder, and
+`Data/DesignTimeDbContextFactory.cs` is the only design-time factory `dotnet ef` needs. Relationships and constraints
+use the Fluent API:
 
 ```csharp
 public void Configure(EntityTypeBuilder<Enrollment> builder)
@@ -393,8 +408,8 @@ public void Configure(EntityTypeBuilder<Enrollment> builder)
 ```
 *Figure: enrolment configuration in `Data/Configurations/UserAndCatalogConfigurations.cs`.*
 
-Queries use LINQ with projections to view models and `AsNoTracking` for reading. Multi-step changes run in a
-transaction that works with Azure SQL's retry policy:
+Queries use LINQ with projections to view models and `AsNoTracking` for reading. Multi-step changes run inside the
+provider's execution strategy, so the unit stays correct if a retrying strategy is ever configured:
 
 ```csharp
 public static Task InTransactionAsync(this ApplicationDbContext db, Func<Task> operation, CancellationToken cancellationToken = default)
@@ -410,9 +425,11 @@ public static Task InTransactionAsync(this ApplicationDbContext db, Func<Task> o
 ```
 *Figure: `Data/TransactionExtensions.cs`.*
 
-At start-up `DatabaseInitializer` applies migrations, creates roles, creates the administrator from configuration and,
-for an empty database, seeds 6 categories, 10 courses, 50 learning resources (including original PDF cheat sheets and
-diagrams), 9 quizzes and realistic learner activity. All four data operations are demonstrated: insert (enrolments,
+At start-up `DatabaseInitializer` applies pending migrations, creates the `Admin` and `Student` roles, creates the
+administrator from configuration and, for an empty database, seeds the demonstration catalogue: 8 categories,
+12 courses (11 published and 1 draft), 64 learning resources (including original PDF cheat sheets and diagrams),
+11 quizzes, 54 questions and 216 answer options, together with 7 learners whose enrolments, completions and attempts
+make the dashboards and progress pages realistic. All four data operations are demonstrated: insert (enrolments,
 attempts, admin create forms), display (catalogue, dashboards), update (edit forms, completion toggles) and delete
 (admin delete pages, leaving a course).
 
@@ -438,8 +455,9 @@ public abstract class AdminControllerBase : Controller
 
 Student controllers carry `[Authorize(Roles = AppRoles.Student)]`. Login redirects only to local return URLs.
 Administrators cannot change, deactivate or delete their own account, and the last active administrator is protected.
-No password is stored in the repository: the first administrator's password comes from user secrets or App Service
-settings.
+No password is stored in the repository: in Development a strong random password is generated into the git-ignored
+`App_Data/demo-credentials.json`, locally it can be overridden with user secrets, and in production it must come from
+the `Seed__AdminPassword` variable.
 
 ### 4.7 Security
 
@@ -453,9 +471,9 @@ settings.
 | Malicious uploads | Extension allow-list, size limits, file signature checks, random names, storage outside `wwwroot` |
 | Brute force and spam | Lockout, generic login errors, rate limiting, contact form honeypot |
 | Misconfiguration | HTTPS and HSTS, security headers, friendly error pages, secure cookies |
-| Secrets exposure | User secrets locally; managed identity for Azure SQL; OpenID Connect for deployment |
+| Secrets exposure | User secrets locally; placeholder-only `.env.example` with a git-ignored `.env`; hosting variables in production; no demo password in Git |
 
-The review against the OWASP Top 10:2025 with test evidence is in [Security-Review.md](Security-Review.md).
+The review against the OWASP Top 10:2025 with test evidence is in [SECURITY.md](SECURITY.md).
 
 ### 4.8 Multimedia
 
@@ -479,13 +497,12 @@ submissions, deletions and rejected uploads. A `/health` endpoint checks the dat
 
 LearnHub combines several test levels, all run by GitHub Actions on every push:
 
-| Level | Scope | Result on 14 September 2026 (commit `273ccc6`) |
-|-------|-------|------------------------------------------------|
-| Unit, service and integration (xUnit v3, `WebApplicationFactory`) | Grading, validation, content safety, uploads, catalogue and quiz services, public site, authentication, authorisation, student journey, admin CRUD, link crawl | 182 of 182 passed on SQLite |
-| Same suite on SQL Server 2022 | Production database engine, after applying all migrations to an empty database | 182 of 182 passed |
-| Smoke test | Published build in Production mode behind a simulated TLS proxy | Passed |
-| Browser (Playwright) | 11 journeys on desktop, tablet and phone | 33 of 33 passed |
-| Accessibility (axe-core) | WCAG 2.2 A and AA rules on 26 page views per screen size | 9 of 9 passed, no violations |
+| Level | Scope | Result on 14 September 2026 |
+|-------|-------|------------------------------|
+| Unit, service and integration (xUnit v3, `WebApplicationFactory`) | Grading, validation, content safety, uploads, catalogue and quiz services, public site, authentication, authorisation, student journey, admin CRUD, link crawl | 211 of 211 passed on SQLite |
+| Container (Docker image, production settings) | The image the host will run, started with `PORT=8080` and a volume mounted at `/data`, then smoke tested, checked for clean logs and restarted | Passed; migrations were applied once and were not re-applied after the restart |
+| Browser (Playwright) | 14 scenarios — public pages, the student journey, the admin journey and accessibility scans — on desktop, tablet and phone | 42 of 42 passed (14 scenarios × 3 viewports) |
+| Accessibility (axe-core) | WCAG 2.2 A and AA rules on 26 page views per screen size, inside the browser suite | 9 of 9 passed, no violations |
 
 Representative test cases:
 
@@ -501,35 +518,53 @@ Representative test cases:
 | Student posts to an admin action with a valid token | Refused | Pass |
 | Upload HTML disguised as a PDF | Rejected; nothing stored | Pass |
 | Delete a category that still has courses | Refused with an explanation | Pass |
-| Delete a course with quiz attempts | Everything removed in order on both databases | Pass |
+| Delete a course with quiz attempts | Everything removed in order, with the dependent quiz answers deleted first | Pass |
 | Crawl every page as guest, student and admin | No broken links or server errors | Pass |
 
-Testing found and fixed fifteen defects, including a query that SQLite could not translate, a relationship error when
-deleting courses, form pages that failed behind a TLS proxy, pages that scrolled sideways on phones and tablets, an
-invisible admin sidebar, overlapping map labels, two accessibility problems and 91 build warnings in the test code. The strategy, full inventory, defect
-log and manual checklist are in [Testing.md](Testing.md).
+Testing found and fixed defects that no single level would have caught, including a query that SQLite could not
+translate, a relationship error when deleting courses, form pages that failed behind a TLS-terminating proxy until
+forwarded headers were configured explicitly, a migration that was never regenerated after a model change and broke
+126 tests until it was recreated, pages that scrolled sideways on phones and tablets, an invisible admin sidebar,
+overlapping map labels, two accessibility problems and 91 build warnings in the test code. The strategy, full
+inventory, defect log and manual checklist are in [TESTING.md](TESTING.md).
 
 ## 6. Deployment
 
-- **Application:** Azure App Service on Linux with .NET 10, HTTPS only. `infra/provision.sh`, run in Azure Cloud Shell,
-  creates the resources on free tiers.
-- **Database:** Azure SQL Database (free offer) with Microsoft Entra authentication only. The web app connects with its
-  system-assigned managed identity, which has only reader, writer and DDL roles, so no database password exists.
-- **Delivery:** `deploy.yml` builds, tests and publishes on every push to `main`, then signs in to Azure through OpenID
-  Connect (no stored secret), deploys and smoke tests the live site. Migrations run at start-up, and an idempotent SQL
-  script is kept for review.
-- **Presentation site:** https://jahongirmirzodv.github.io/LearnHub/ is published from `docs/` by `pages.yml`. Its
-  "Launch LearnHub" buttons point to the App Service URL once the team has provisioned Azure; GitHub Pages cannot host
-  the ASP.NET Core application itself.
+- **Source and delivery:** the code lives on GitHub, which is both the source of truth and the CI runner. `ci.yml`
+  runs three jobs on every push: build and the whole .NET test suite; the container job that builds the image and runs
+  it the way the host will; and the Playwright browser suite against a production instance over HTTPS.
+- **Application host:** Railway builds the multi-stage `Dockerfile` — a .NET 10 SDK stage that publishes the
+  application and an ASP.NET Core 10 runtime stage that runs it — and `railway.json` selects the Dockerfile builder,
+  checks `/health` with a 300-second timeout and restarts the service on failure. Railway supplies `PORT`, and the
+  application reads it so that it listens on `0.0.0.0:<PORT>`; the image sets `PORT=8080` only as a fallback for local
+  runs.
+- **Database:** SQLite, with the file on a Railway volume mounted at `/data` and its path supplied as
+  `DATABASE_CONNECTION_STRING=Data Source=/data/learnhub.db`. Migrations, roles, the administrator and the
+  demonstration catalogue are applied at start-up, so the image needs no separate migration step.
+- **Persistent state:** the same volume holds the Data Protection key ring under `DataProtection__KeysPath=/data/keys`
+  and administrator uploads under `Storage__RootPath=/data/storage`. Without a volume every redeploy would start from
+  an empty database, sign every user out and lose the uploaded files.
+- **Proxy and TLS:** Railway terminates TLS at its edge proxy and forwards plain HTTP with `X-Forwarded-Proto` and
+  `X-Forwarded-For`. `UsePlatformProxyHeaders()` turns those headers into `Request.IsHttps` and the real client address,
+  because the framework does not read them on its own; without it HSTS would never be sent and secure cookies would be
+  refused.
+- **Presentation site:** https://learnhub-wapp.web.app is live on Firebase Hosting, served from `FirebaseLanding/` with
+  `firebase.json` and `.firebaserc` at the repository root. Firebase cannot execute ASP.NET Core, so this is a static
+  presentation and documentation page whose "Open Learning System" buttons link to the Railway application; after the
+  first Railway deploy, `scripts/set-app-url.sh <railway-url>` rewrites that link and `firebase deploy --only hosting`
+  republishes the site.
+- **Status:** the Railway service has **not** been deployed yet — the CLI is installed but not authenticated. Every
+  file and command is ready, and the container job in CI already proves the image, the migrations and the volume
+  behaviour.
 
 The step-by-step guide, configuration reference, verification checklist and rollback procedure are in
-[Deployment.md](Deployment.md).
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## 7. Screenshots
 
 ### 7.1 Home page
 
-![Home page](../docs/assets/screens/home-desktop.png)
+![Home page](../FirebaseLanding/assets/screens/home-desktop.png)
 
 The home page introduces LearnHub, offers a server-side course search and draws each category as a line into the
 LearnHub hub; every line links to that category's courses. Below are the most popular courses, how learning works
@@ -537,14 +572,14 @@ and a call to action. Requirements: GUEST-01, UI-01, UI-02.
 
 ### 7.2 Home page on a phone
 
-![Home page on a phone](../docs/assets/screens/home-mobile.png)
+![Home page on a phone](../FirebaseLanding/assets/screens/home-mobile.png)
 
 On small screens the navigation collapses behind a menu button and the map is replaced by category links, so the page
 stays fast and readable. Requirement: UI-05.
 
 ### 7.3 Course details
 
-![Course details](../docs/assets/screens/course-desktop.png)
+![Course details](../FirebaseLanding/assets/screens/course-desktop.png)
 
 Course details show difficulty, duration, lessons, quizzes, learners and instructor, the description and learning
 outcomes, and the course route. Guests can open the free preview lesson while the other stops are locked; the panel
@@ -552,7 +587,7 @@ invites them to register or log in to enrol. Requirements: GUEST-06, GUEST-07.
 
 ### 7.4 Lesson player
 
-![Lesson page](../docs/assets/screens/lesson-desktop.png)
+![Lesson page](../FirebaseLanding/assets/screens/lesson-desktop.png)
 
 An enrolled student reads a lesson with code examples beside the course outline, which shows completed and current
 stops. The course progress bar sits above the lesson, and the student can mark the lesson complete and move to the
@@ -560,7 +595,7 @@ next one. Requirements: STU-08, STU-09, TECH-09.
 
 ### 7.5 Student dashboard
 
-![Student dashboard](../docs/assets/screens/student-dashboard-desktop.png)
+![Student dashboard](../FirebaseLanding/assets/screens/student-dashboard-desktop.png)
 
 The dashboard shows figures from the database (enrolled and completed courses, lessons completed, quizzes passed,
 courses still available), courses in progress with Resume buttons, recent quiz results, recent activity and
@@ -568,21 +603,21 @@ recommendations. Requirements: STU-01, STU-02, STU-03.
 
 ### 7.6 Quiz result
 
-![Quiz result](../docs/assets/screens/quiz-result-desktop.png)
+![Quiz result](../FirebaseLanding/assets/screens/quiz-result-desktop.png)
 
 After submitting, the student sees the score, whether the pass mark was reached, and every question with the chosen
 answer, the correct answer and an explanation. Requirements: STU-10, STU-11.
 
 ### 7.7 Admin dashboard
 
-![Admin dashboard](../docs/assets/screens/admin-dashboard-desktop.png)
+![Admin dashboard](../FirebaseLanding/assets/screens/admin-dashboard-desktop.png)
 
 The administrator sees live platform figures, the most enrolled courses, enrolments by category and recent activity in
 the protected admin area with its own navigation. Requirements: ADM-01, ADM-02.
 
 ### 7.8 Course management
 
-![Admin course list](../docs/assets/screens/admin-courses-desktop.png)
+![Admin course list](../FirebaseLanding/assets/screens/admin-courses-desktop.png)
 
 The course list combines search and filters with cover thumbnails, level and publication status, counts of lessons,
 quizzes and learners, and edit and delete actions. Requirement: ADM-03.
@@ -601,27 +636,36 @@ Every GitHub Actions run also stores full-page screenshots of all browser scenar
 
 ### 8.1 Strengths
 
-- **Complete journeys:** every role's journey works end to end, and automated tests prove it on two database engines
-  and three screen sizes.
+- **Complete journeys:** every role's journey works end to end, and automated tests prove it on the real database
+  engine, inside the container the host will run and at three screen sizes.
 - **Security by default:** access control, antiforgery, encoding, upload checks and secrets handling come from the
   framework and are tested with attack-style cases.
 - **Truthful data model:** unique indexes, check constraints, deliberate delete rules, score snapshots and calculated
   progress.
 - **Distinctive, accessible interface:** a consistent design system around one metaphor, with no automated
   accessibility violations.
-- **Reproducible delivery:** migrations, seed data, CI checks and passwordless cloud deployment mean anyone can rebuild
-  and deploy the system from the repository.
+- **Reproducible delivery:** one migration set, deterministic seed data, CI checks and a multi-stage `Dockerfile` mean
+  anyone can rebuild the system from the repository and run the image the way the host will.
 
 ### 8.2 Limitations
 
 - No email confirmation or password reset by email, and no multi-factor authentication.
-- A single-instance design: migrations at start-up and files on App Service storage.
-- Free hosting tiers start slowly after idle periods, and the free database pauses when its monthly limit is used.
+- A single-instance design: migrations run at start-up, and the SQLite file, the key ring and the uploads share one
+  mounted volume, so scaling out would need a different database and object storage.
+- The Railway service is configured but not yet deployed, so the application has so far been exercised only locally,
+  in the container job in CI and in the browser tests.
 - Manual keyboard, screen-reader and real-device testing still needs to be completed by the team.
 
 ### 8.3 Lessons learned
 
-- Running tests on the production database engine early exposed differences that SQLite alone would have hidden.
+- The assignment forbids Azure, so the earlier Azure deployment was replaced with Railway and Firebase. Reducing the
+  data layer to a single SQLite provider at the same time removed a whole class of dialect differences from the test
+  matrix and one entire schema to maintain.
+- A migration that was never regenerated after a model change left the schema behind the model and broke 126 tests
+  until it was recreated: a model change and its migration belong in the same change.
+- Form pages failed on any host that terminates TLS in front of the application until forwarded headers were
+  configured explicitly. `ASPNETCORE_FORWARDEDHEADERS_ENABLED` was an App Service hosting feature, and the framework
+  does not read `X-Forwarded-Proto` on its own.
 - Screenshots and browser tests at several sizes found layout bugs that unit and integration tests could not see.
 - Designing from real content and one clear concept produced a more coherent interface than adding styles page by
   page.
@@ -634,24 +678,29 @@ Every GitHub Actions run also stores full-page screenshots of all browser scenar
 3. An instructor role that can manage only their own courses.
 4. Question banks, randomised questions and timed quizzes.
 5. Discussion threads per lesson, moderated by administrators.
-6. Azure Blob Storage for files, Application Insights monitoring and alerts, and scaling out.
-7. Dependabot updates and vulnerability scanning in CI.
+6. A managed relational database and object storage for uploads, so the application can run more than one instance
+   instead of sharing one mounted volume.
+7. Monitoring and alerting for the deployed service, once the Railway deployment has been made.
+8. Dependabot updates and vulnerability scanning in CI.
 
 ## 10. Conclusion
 
 The team delivered LearnHub, a secure, responsive and tested learning management system that meets the assignment's
 requirements for guests, students and administrators. ASP.NET Core MVC, Entity Framework Core and Identity provided a
 solid, explainable foundation; a relational model with deliberate constraints keeps data correct; and a distinctive
-design system makes the product easy to use on any device. Automated testing on two database engines and three screen
-sizes, together with continuous integration and passwordless deployment, gives confidence that the system works as
-described and can be maintained by future teams.
+design system makes the product easy to use on any device. Automated testing — 211 .NET test cases, a container check
+that proves the database survives a restart, and 42 browser and accessibility checks at three screen sizes — together
+with continuous integration gives confidence that the system works as described and can be maintained by future teams.
+The presentation site is live on Firebase Hosting, and the Railway service is built, configured and waiting for its
+first deploy.
 
 ## References
 
 Deque Systems. (n.d.). *axe-core* [Computer software]. GitHub. https://github.com/dequelabs/axe-core
 
-GitHub. (n.d.). *Configuring OpenID Connect in Azure*. GitHub Docs.
-https://docs.github.com/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure
+Docker. (n.d.). *Multi-stage builds*. Docker Docs. https://docs.docker.com/build/building/multi-stage/
+
+Firebase. (n.d.). *Firebase Hosting*. Firebase Documentation. https://firebase.google.com/docs/hosting
 
 Microsoft. (n.d.-a). *Configure ASP.NET Core to work with proxy servers and load balancers*. Microsoft Learn.
 https://learn.microsoft.com/aspnet/core/host-and-deploy/proxy-load-balancer
@@ -678,14 +727,11 @@ https://learn.microsoft.com/aspnet/core/performance/rate-limit
 Microsoft. (n.d.-i). *Safe storage of app secrets in development*. Microsoft Learn.
 https://learn.microsoft.com/aspnet/core/security/app-secrets
 
-Microsoft. (n.d.-j). *Securely connect .NET apps to Azure SQL Database using managed identity*. Microsoft Learn.
-https://learn.microsoft.com/azure/app-service/tutorial-connect-msi-sql-database
+Microsoft. (n.d.-j). *SQLite EF Core Database Provider*. Microsoft Learn.
+https://learn.microsoft.com/ef/core/providers/sqlite/
 
 Microsoft. (n.d.-k). *Tag Helpers in ASP.NET Core*. Microsoft Learn.
 https://learn.microsoft.com/aspnet/core/mvc/views/tag-helpers/intro
-
-Microsoft. (n.d.-l). *Try Azure SQL Database for free*. Microsoft Learn.
-https://learn.microsoft.com/azure/azure-sql/database/free-offer
 
 Mozilla. (n.d.). *Content Security Policy (CSP)*. MDN Web Docs. https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
 
@@ -699,6 +745,8 @@ https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
 
 Playwright. (n.d.). *Installation*. Playwright documentation. https://playwright.dev/docs/intro
 
+Railway. (n.d.). *Using volumes*. Railway Docs. https://docs.railway.com/volumes
+
 The Bootstrap Authors. (n.d.). *Get started with Bootstrap* (Version 5.3). https://getbootstrap.com/docs/5.3/getting-started/introduction/
 
 World Wide Web Consortium. (2023). *Web Content Accessibility Guidelines (WCAG) 2.2*. https://www.w3.org/TR/WCAG22/
@@ -709,20 +757,29 @@ xUnit.net. (n.d.). *xUnit.net*. https://xunit.net/
 
 ### Appendix A – Requirements traceability
 
-Each requirement ID in [Requirements-Checklist.md](Requirements-Checklist.md) is mapped to its implementation, evidence
-and status in [Requirements-Audit.md](Requirements-Audit.md).
+Each requirement ID in [REQUIREMENTS_CHECKLIST.md](REQUIREMENTS_CHECKLIST.md) is mapped to its implementation, evidence
+and status in [REQUIREMENT_TRACEABILITY.md](REQUIREMENT_TRACEABILITY.md).
 
 ### Appendix B – Test run evidence
 
-GitHub Actions run [34800787823](https://github.com/JahongirmirzoDv/LearnHub/actions/runs/34800787823) shows the three CI
-jobs for commit `273ccc6`: build with zero warnings and tests on SQLite (182 passed), SQL Server migrations, tests (182 passed) and smoke
-test, and browser tests (42 passed). Each run stores TRX result files, the idempotent migration script, Playwright
-reports, screenshots and application logs as artifacts.
+`.github/workflows/ci.yml` defines three jobs, all triggered by a push or a pull request:
+
+| Job | What it proves |
+|-----|----------------|
+| `build-and-test` | The solution restores and builds with `-p:TreatWarningsAsErrors=true`, and all 211 .NET test cases pass on SQLite. |
+| `container` | The Docker image builds, starts in Production with `PORT=8080` and a volume mounted at `/data`, answers `/health`, passes `scripts/smoke-test.sh`, logs that migrations were applied and the demo data seeded, and — after a restart — does **not** re-apply migrations, which proves the SQLite file really persisted. |
+| `e2e` | 14 Playwright scenarios × 3 viewports (42 checks) run against a production instance over HTTPS, including axe-core accessibility scans. |
+
+Each run stores the TRX result file, the container logs, the Playwright report, the full-page screenshots and the
+application log as downloadable artifacts. The figures in section 5 were measured on 14 September 2026 by running the
+same commands locally, and `.github/workflows/ef-migrations.yml` keeps the single SQLite migration regenerated on
+demand.
 
 ### Appendix C – User guide
 
 **Guest:** open the site, search or pick a category on the Courses page, open a course and try a lesson marked "Free
-preview". Select **Register** to create an account.
+preview". Select **Register** to create an account. The illustrated walkthrough is in
+[USER_GUIDE.md](USER_GUIDE.md).
 
 **Student:** from the dashboard, select **Resume** on a course or open **Courses** and select **Enrol**. Work through the
 course route, select **Mark as complete** after each lesson, take the quiz when ready and review the explanations. Use
@@ -734,10 +791,12 @@ people, **Quiz results** to review attempts and **Messages** for the contact inb
 
 ### Appendix D – Installation summary
 
-With the .NET 10 SDK: clone the repository, set `Seed:AdminPassword` and `Seed:DemoStudentPassword` with
-`dotnet user-secrets`, and run `dotnet run --project src/LearnHub`. The SQLite database is created, migrated and seeded
-automatically. Full instructions are in the [README](../README.md); production deployment is in
-[Deployment.md](Deployment.md).
+With the .NET 10 SDK: clone the repository and run `dotnet run --project src/LearnHub`. The SQLite database is created,
+migrated and seeded automatically. In Development, strong random passwords for the DEMO ONLY administrator and student
+accounts are generated into the git-ignored `App_Data/demo-credentials.json`; set `Seed:AdminPassword` and
+`Seed:DemoStudentPassword` with `dotnet user-secrets` to choose your own. To run the image the way the host will, build
+the `Dockerfile` and mount a volume at `/data`; every variable is documented in `.env.example`. Full instructions are in
+the [README](../README.md); production deployment is in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### Appendix E – Individual contributions
 
