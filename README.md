@@ -1,6 +1,6 @@
 # LearnHub – Web-Based Learning System
 
-[![CI](https://github.com/JahongirmirzoDv/LearnHub/actions/workflows/ci.yml/badge.svg)](https://github.com/JahongirmirzoDv/LearnHub/actions/workflows/ci.yml)
+[![CI](https://github.com/KhayitOff/LearnHub/actions/workflows/ci.yml/badge.svg)](https://github.com/KhayitOff/LearnHub/actions/workflows/ci.yml)
 
 LearnHub is a web-based learning system built with **ASP.NET Core MVC** for the **CT050-3-2-WAPP Web Applications**
 group assignment at Asia Pacific University of Technology & Innovation. Guests browse and search a catalogue of
@@ -11,7 +11,7 @@ manage the whole platform from a protected admin area.
 |---|---|
 | Presentation site (Firebase Hosting) | **https://learnhub-wapp.web.app** |
 | Live application (Railway) | Added after the first deploy – see [Deployment](docs/DEPLOYMENT.md) |
-| Repository | https://github.com/JahongirmirzoDv/LearnHub |
+| Repository | https://github.com/KhayitOff/LearnHub |
 
 ![LearnHub home page](FirebaseLanding/assets/screens/home-desktop.png)
 
@@ -130,7 +130,7 @@ No database server is needed: development uses a SQLite file created automatical
 ### Run locally
 
 ```bash
-git clone https://github.com/JahongirmirzoDv/LearnHub.git
+git clone https://github.com/KhayitOff/LearnHub.git
 ```
 
 ```bash

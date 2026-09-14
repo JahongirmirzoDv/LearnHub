@@ -18,7 +18,7 @@ serves from `FirebaseLanding/assets/screens/`.
 | Lecturer | *Lecturer's name* |
 | Intake | *Intake code* |
 | Submission date | *Date* |
-| Repository | https://github.com/JahongirmirzoDv/LearnHub |
+| Repository | https://github.com/KhayitOff/LearnHub |
 | Presentation site | https://learnhub-wapp.web.app (Firebase Hosting, live) |
 
 ## Abstract

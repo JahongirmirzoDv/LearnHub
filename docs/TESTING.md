@@ -41,7 +41,7 @@ dotnet test --solution LearnHub.sln
 Evidence: measured on 14 September 2026 on the working branch `feature/railway-firebase-sqlite` with
 `dotnet test LearnHub.sln -c Release`. Every job uploads its evidence as an artifact — the TRX result files, the
 Playwright report and screenshots, and the container log — so the figures below can be reproduced from the
-[Actions page](https://github.com/JahongirmirzoDv/LearnHub/actions) or locally.
+[Actions page](https://github.com/KhayitOff/LearnHub/actions) or locally.
 
 | Job | Result |
 |-----|--------|

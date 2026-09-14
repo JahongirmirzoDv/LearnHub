@@ -6,7 +6,7 @@ LearnHub is delivered by three services, each doing one job:
 
 | Part | Service | What it does |
 |------|---------|--------------|
-| Source and automation | **GitHub** (`JahongirmirzoDv/LearnHub`) | Holds the code, runs `ci.yml` on every push and can add a migration with `ef-migrations.yml` |
+| Source and automation | **GitHub** (`KhayitOff/LearnHub`) | Holds the code, runs `ci.yml` on every push and can add a migration with `ef-migrations.yml` |
 | Application | **Railway** (Docker) | Runs the ASP.NET Core MVC application from `Dockerfile`, with a volume at `/data` holding the SQLite database, the Data Protection keys and uploads |
 | Presentation | **Firebase Hosting** | Serves the static site in `FirebaseLanding/` (landing page, screenshots, design system) |
 
@@ -126,7 +126,7 @@ The remaining optional variables:
 
 | Variable | Example / placeholder | Purpose |
 |----------|-----------------------|---------|
-| `Site__RepositoryUrl` | `https://github.com/JahongirmirzoDv/LearnHub` | Repository link shown in the footer and on the About page. |
+| `Site__RepositoryUrl` | `https://github.com/KhayitOff/LearnHub` | Repository link shown in the footer and on the About page. |
 | `Site__PresentationUrl` | `https://learnhub-wapp.web.app` | Link from the application back to the presentation site. |
 | `Database__ApplyMigrationsOnStartup` | `true` (default) | Leave `true` for the single-instance deployment used here. |
 | `RateLimiting__PermitLimit` / `RateLimiting__WindowSeconds` | `10` / `60` (defaults) | Form submissions per IP address per window. |
@@ -392,7 +392,7 @@ repository**: the `.gitignore` excludes `.env`, `.env.*` (keeping only `.env.exa
 | `Seed__DemoData` | Recommended | `true` | Seed the demonstration catalogue into an empty database |
 | `Database__ApplyMigrationsOnStartup` | Optional | `true` (default) | Apply pending migrations at start-up |
 | `RateLimiting__PermitLimit` / `RateLimiting__WindowSeconds` | Optional | `10` / `60` (defaults) | Form submissions per IP address per window |
-| `Site__RepositoryUrl` | Optional | `https://github.com/JahongirmirzoDv/LearnHub` | Footer and About-page link |
+| `Site__RepositoryUrl` | Optional | `https://github.com/KhayitOff/LearnHub` | Footer and About-page link |
 | `Site__PresentationUrl` | Optional | `https://learnhub-wapp.web.app` | Link back to the presentation site |
 | `PORT` | No – set by Railway | `8080` (image fallback only) | The port the application binds on `0.0.0.0` |
 
